@@ -1,5 +1,5 @@
 
-import { Subject, Topic, TopicProgress, Status } from './types';
+import { Subject, Topic, TopicProgress, Status, Question } from './types';
 
 // Comprehensive Syllabus Data simulating a 2-Year Coaching Structure (e.g., Bakliwal Tutorials)
 export const SYLLABUS_DATA: Topic[] = [
@@ -108,3 +108,67 @@ SYLLABUS_DATA.forEach(topic => {
     ]
   };
 });
+
+// Offline Database for Questions
+export const MOCK_QUESTION_DB: Partial<Record<Subject, Partial<Question>[]>> = {
+  [Subject.PHYSICS]: [
+    {
+      questionText: "If the error in the measurement of the radius of a sphere is 2%, then the error in the determination of volume of the sphere will be:",
+      options: ["4%", "8%", "2%", "6%"],
+      correctAnswer: "6%",
+      explanation: "Volume V = (4/3)πr³. The percentage error in V is 3 times the percentage error in r. 3 * 2% = 6%."
+    },
+    {
+      questionText: "A projectile is fired at an angle of 45° with the horizontal. Elevation angle of the projectile at its highest point as seen from the point of projection, is:",
+      options: ["60°", "tan⁻¹(1/2)", "tan⁻¹(√3/2)", "45°"],
+      correctAnswer: "tan⁻¹(1/2)",
+      explanation: "At maximum height, H = (u²sin²θ)/2g and Range R = (u²sin2θ)/g. For θ=45°, R = 4H. If α is the elevation angle, tan α = H/(R/2) = 2H/R. Substituting R=4H, tan α = 2H/4H = 1/2. So α = tan⁻¹(1/2)."
+    },
+    {
+      questionText: "Two masses m and M are connected by a light string passing over a smooth pulley. When set free, m moves up and M moves down. The tension in the string is:",
+      options: ["(M-m)g", "(M+m)g", "2mMg/(M+m)", "mMg/(M+m)"],
+      correctAnswer: "2mMg/(M+m)",
+      explanation: "Using standard Atwood machine formula: T = 2mMg / (M+m)."
+    }
+  ],
+  [Subject.CHEMISTRY]: [
+    {
+      questionText: "Which of the following sets of quantum numbers is NOT possible?",
+      options: ["n=3, l=2, m=0, s=+1/2", "n=2, l=2, m=1, s=-1/2", "n=4, l=0, m=0, s=-1/2", "n=3, l=2, m=-2, s=+1/2"],
+      correctAnswer: "n=2, l=2, m=1, s=-1/2",
+      explanation: "The angular momentum quantum number 'l' must be less than the principal quantum number 'n'. For n=2, possible values of l are 0 and 1. l cannot be 2."
+    },
+    {
+      questionText: "Which species has a Trigonal Planar geometry?",
+      options: ["NH3", "BF3", "PCl3", "IF3"],
+      correctAnswer: "BF3",
+      explanation: "Boron in BF3 is sp² hybridized with 0 lone pairs, leading to a trigonal planar geometry. NH3 is pyramidal, PCl3 is pyramidal, IF3 is T-shaped."
+    },
+    {
+      questionText: "For a reaction A + B ⇌ C + D, if the concentration of A is doubled, the rate of reaction doubles. If concentration of B is doubled, the rate increases by a factor of 4. The order of reaction is:",
+      options: ["2", "3", "1", "4"],
+      correctAnswer: "3",
+      explanation: "Rate ∝ [A]¹ and Rate ∝ [B]². Total Order = 1 + 2 = 3."
+    }
+  ],
+  [Subject.MATHS]: [
+    {
+      questionText: "If the roots of the equation x² - bx + c = 0 be two consecutive integers, then b² - 4c equals:",
+      options: ["-1", "0", "1", "2"],
+      correctAnswer: "1",
+      explanation: "Let roots be α and α+1. Sum = 2α+1 = b, Product = α(α+1) = c. Discriminant D = b² - 4c = (Roots diff)². (α+1 - α)² = 1² = 1."
+    },
+    {
+      questionText: "The number of ways in which 5 boys and 5 girls can sit in a ring such that no two girls sit together is:",
+      options: ["5! × 5!", "4! × 5!", "5! × 4!", "None of these"],
+      correctAnswer: "4! × 5!",
+      explanation: "First, arrange the 5 boys in a circle in (5-1)! = 4! ways. There are 5 gaps created between them. The 5 girls can be placed in these 5 gaps in 5! ways. Total ways = 4! × 5!."
+    },
+    {
+      questionText: "The period of the function f(x) = sin⁴x + cos⁴x is:",
+      options: ["π", "π/2", "2π", "π/4"],
+      correctAnswer: "π/2",
+      explanation: "f(x) = (sin²x + cos²x)² - 2sin²xcos²x = 1 - 0.5sin²(2x). sin²(2x) has period π/2. Thus f(x) has period π/2."
+    }
+  ]
+}

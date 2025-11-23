@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { generateStudyPlan } from '../services/geminiService';
 import { SYLLABUS_DATA } from '../constants';
@@ -40,10 +41,10 @@ export const AIPlanner: React.FC = () => {
         <div className="bg-gradient-to-r from-bt-blue to-blue-700 p-6 text-white">
           <div className="flex items-center gap-2 mb-2">
             <Sparkles className="w-6 h-6 text-yellow-300" />
-            <h2 className="text-2xl font-bold">AI Study Planner</h2>
+            <h2 className="text-2xl font-bold">Smart Study Planner</h2>
           </div>
           <p className="text-blue-100">
-            Select your weak topics and let our AI mentor create a personalized Bakliwal-style schedule for you.
+            Select your weak topics and let our algorithmic engine create a personalized Bakliwal-style schedule.
           </p>
         </div>
 
@@ -123,7 +124,7 @@ export const AIPlanner: React.FC = () => {
             className="w-full bg-bt-blue hover:bg-blue-700 text-white font-semibold py-3 rounded-lg shadow transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? <Loader2 className="animate-spin" /> : <Sparkles />}
-            Generate Personalized Schedule
+            Generate Schedule
           </button>
         </div>
       </div>

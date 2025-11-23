@@ -116,7 +116,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                 className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${activeTab === 'ai' ? 'bg-purple-50 text-purple-700 font-medium' : 'text-gray-600 hover:text-gray-900'}`}
               >
                 <BrainCircuit size={18} />
-                AI Planner
+                Smart Planner
               </button>
               <button 
                 onClick={() => setActiveTab('timetable')}
@@ -173,7 +173,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                 onClick={() => { setActiveTab('ai'); setMobileMenuOpen(false); }}
                 className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900"
               >
-                AI Planner
+                Smart Planner
               </button>
               <button 
                 onClick={() => { setActiveTab('timetable'); setMobileMenuOpen(false); }}

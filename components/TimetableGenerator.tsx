@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { generateWeeklyTimetable } from '../services/geminiService';
 import { CalendarClock, Loader2, Save, School, Moon, BookOpen, Clock } from 'lucide-react';
@@ -159,7 +160,7 @@ export const TimetableGenerator: React.FC = () => {
                    <Save size={16} /> Print / Save PDF
                 </button>
              </div>
-             <div className="prose prose-orange max-w-none prose-headings:font-bold prose-h3:text-lg prose-p:text-gray-600 prose-li:text-gray-600">
+             <div className="prose prose-orange max-w-none prose-headings:font-bold prose-h3:text-lg prose-p:text-gray-600 prose-li:text-gray-600" style={{fontSize: '0.95rem'}}>
                <ReactMarkdown>{result}</ReactMarkdown>
              </div>
            </div>

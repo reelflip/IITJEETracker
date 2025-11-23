@@ -1,8 +1,9 @@
+
 import React, { useState } from 'react';
 import { SYLLABUS_DATA } from '../constants';
 import { Difficulty, Question, Subject } from '../types';
 import { generatePracticeQuestions } from '../services/geminiService';
-import { Loader2, BrainCircuit, CheckCircle, XCircle, Eye, EyeOff, BookOpen } from 'lucide-react';
+import { Loader2, BrainCircuit, CheckCircle, XCircle, Eye, EyeOff, BookOpen, Database } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 export const QuestionBank: React.FC = () => {
@@ -39,10 +40,10 @@ export const QuestionBank: React.FC = () => {
         <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-6 text-white">
           <div className="flex items-center gap-2 mb-2">
             <BookOpen className="w-6 h-6 text-teal-100" />
-            <h2 className="text-2xl font-bold">AI Question Bank</h2>
+            <h2 className="text-2xl font-bold">Practice Question Bank</h2>
           </div>
           <p className="text-teal-50">
-            Generate unlimited practice problems for any topic, tailored to your difficulty level.
+            Access practice problems tailored to your difficulty level from our offline database.
           </p>
         </div>
 
@@ -95,8 +96,8 @@ export const QuestionBank: React.FC = () => {
             disabled={loading || !selectedTopic}
             className="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-3 rounded-lg shadow transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? <Loader2 className="animate-spin" /> : <BrainCircuit />}
-            Generate Questions
+            {loading ? <Loader2 className="animate-spin" /> : <Database />}
+            Get Questions
           </button>
         </div>
       </div>
@@ -157,7 +158,7 @@ export const QuestionBank: React.FC = () => {
         ))}
         {questions.length === 0 && !loading && selectedTopic && (
           <div className="text-center text-gray-500 py-8">
-            Press "Generate Questions" to start practicing.
+            Press "Get Questions" to load from the database.
           </div>
         )}
       </div>
