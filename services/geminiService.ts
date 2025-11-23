@@ -5,6 +5,27 @@ import { MOCK_QUESTION_DB } from "../constants";
 // Helper to simulate "processing" time for a realistic feel
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+// --- Time Helper Functions ---
+
+const timeToMins = (time: string): number => {
+  const [h, m] = time.split(':').map(Number);
+  return h * 60 + m;
+};
+
+const minsToTime = (mins: number): string => {
+  let h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (h >= 24) h -= 24;
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+};
+
+const formatTimeRange = (startMins: number, durationMins: number): string => {
+  const endMins = startMins + durationMins;
+  return `${minsToTime(startMins)} - ${minsToTime(endMins)}`;
+};
+
+// -----------------------------
+
 /**
  * Offline Study Plan Generator
  * Creates a deterministic plan based on inputs without AI.
@@ -109,17 +130,28 @@ export const generatePracticeQuestions = async (topicName: string, difficulty: s
 
 /**
  * Offline Timetable Generator
- * Returns a structured object instead of raw markdown for better rendering control.
+ * Returns a structured object using dynamic time calculation.
  */
 export const generateWeeklyTimetable = async (constraints: TimetableConstraints): Promise<WeeklySchedule> => {
   await delay(500);
   const { coachingDays, coachingTime, schoolDetails, sleepSchedule } = constraints;
   
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  const subjects = ['Physics', 'Maths', 'Chemistry']; // Order of rotation
-  let subjectIndex = 0; // Tracks which subject is next for Deep Work
+  const subjects = ['Physics', 'Maths', 'Chemistry']; 
+  let subjectIndex = 0; 
 
   const schedule: DailySchedule[] = [];
+
+  // Parse Constraints
+  const wakeMins = timeToMins(sleepSchedule.wake);
+  const bedMins = timeToMins(sleepSchedule.bed);
+  const coachingStartMins = timeToMins(coachingTime.start);
+  const coachingEndMins = timeToMins(coachingTime.end);
+  const schoolStartMins = timeToMins(schoolDetails.start);
+  const schoolEndMins = timeToMins(schoolDetails.end);
+  
+  // Determine Coaching Type
+  const isMorningCoaching = coachingStartMins < 720; // Starts before 12:00 PM
 
   days.forEach(day => {
     const isCoaching = coachingDays.includes(day);
@@ -129,77 +161,150 @@ export const generateWeeklyTimetable = async (constraints: TimetableConstraints)
     let activities: string[] = [];
     let type: DailySchedule['type'] = 'school';
     let studyHours = 0;
+    let currentTime = wakeMins;
 
+    // --- Sunday Logic ---
     if (isSunday) {
       type = 'exam';
-      activities = [
-        "08:00 - 09:00: 🧠 Quick Formula Revision",
-        "09:00 - 12:00: 📝 Full Syllabus / Part Test (Simulate Exam Hall)",
-        "12:00 - 14:00: 🥗 Lunch & Brain Rest",
-        "14:00 - 16:00: 🔍 **Critical**: Test Analysis (Identify Silly Mistakes)",
-        "16:30 - 19:30: 🔄 Revision of Weak Areas found in Test",
-        "20:00 - 21:00: 📅 Plan next week's targets"
-      ];
-      studyHours = 6;
-    } else {
-      // --- Morning Slots ---
-      if (isSchool) {
-        activities.push(`🏫 School (${schoolDetails.start} - ${schoolDetails.end})`);
-        type = 'school';
-      } else {
-        // Dummy School / Holiday
-        type = 'holiday';
-        const sub1 = subjects[subjectIndex % 3];
-        const sub2 = subjects[(subjectIndex + 1) % 3];
-        
-        activities.push(`🌅 06:30 - 08:30: 🧘‍♂️ Morning Ritual & Inorganic Chemistry (Memorization)`);
-        activities.push(`🧠 09:00 - 11:30: 🚀 Deep Work - ${sub1} (Theory + Examples)`);
-        activities.push(`☕ 11:30 - 12:00: Break`);
-        activities.push(`✏️ 12:00 - 14:30: 🧩 Problem Solving - ${sub2} (Timed Practice)`);
-        studyHours += 5; // Morning productivity
-      }
+      activities.push(`${formatTimeRange(currentTime, 60)}: 🌅 Wake up & Light Breakfast`);
+      currentTime += 60;
+      activities.push(`${formatTimeRange(currentTime, 60)}: 🧠 Formula Revision`);
+      currentTime += 60;
+      activities.push(`${formatTimeRange(currentTime, 180)}: 📝 **Full Syllabus / Part Test** (Exam Sim)`);
+      currentTime += 180;
+      activities.push(`${formatTimeRange(currentTime, 90)}: 🥗 Lunch & Relax`);
+      currentTime += 90;
+      activities.push(`${formatTimeRange(currentTime, 150)}: 🔍 **Test Analysis** (Mistake Notebook)`);
+      currentTime += 150;
+      activities.push(`${formatTimeRange(currentTime, 30)}: ☕ Tea Break`);
+      currentTime += 30;
+      activities.push(`${formatTimeRange(currentTime, 120)}: 🔄 Weak Area Revision`);
+      studyHours = 6.5;
+    } 
+    else {
+      // --- Weekday Logic ---
+      
+      // 1. Morning Routine
+      activities.push(`${formatTimeRange(currentTime, 30)}: 🌅 Wake Up & Freshen Up`);
+      currentTime += 30;
 
-      // --- Afternoon Buffer ---
-      activities.push(`🔋 14:30 - 16:00: Lunch, Power Nap (20m) & Recharge`);
-
-      // --- Evening / Night Slots ---
-      if (isCoaching) {
+      // 2. Pre-Noon Block
+      if (isMorningCoaching && isCoaching) {
          type = 'coaching';
-         // Before Coaching
-         activities.push(`🎒 16:00 - ${coachingTime.start}: Pre-class review (Last lecture notes)`);
+         // Travel buffer (approx 30 mins before)
+         if (currentTime < coachingStartMins - 30) {
+            activities.push(`${formatTimeRange(currentTime, coachingStartMins - 30 - currentTime)}: 🥛 Breakfast & Travel`);
+         }
+         currentTime = coachingStartMins;
          
          // Coaching
-         activities.push(`🏢 Coaching (${coachingTime.start} - ${coachingTime.end})`);
-         
-         // Post Coaching - CRITICAL REVISION
-         activities.push(`🍲 Dinner Break (45 mins)`);
-         activities.push(`🔄 **Priority**: Revise Today's Class Notes (1.5 hrs)`);
-         activities.push(`✍️ Solve 10-15 HW Questions based on today's class (1 hr)`);
-         
-         studyHours += 2.5; 
-      } else {
-         // Non-Coaching Evening (Deep Work)
-         // Calculate which subject to focus on based on rotation
-         let eveningSubject;
-         if (isSchool) {
-             // If school day, we need to fit 2 subjects in evening
-             eveningSubject = `${subjects[subjectIndex % 3]} & ${subjects[(subjectIndex + 1) % 3]}`;
-             subjectIndex += 2; // Advance by 2
-         } else {
-             // If dummy school, we did 2 subjects in morning, do the 3rd one now
-             eveningSubject = subjects[(subjectIndex + 2) % 3];
-             subjectIndex += 1; // Advance rotation
-         }
+         activities.push(`${formatTimeRange(coachingStartMins, coachingEndMins - coachingStartMins)}: 🏢 **Coaching Classes**`);
+         currentTime = coachingEndMins;
 
-         activities.push(`🚀 16:30 - 19:00: Deep Work - ${eveningSubject}`);
-         activities.push(`☕ 19:00 - 19:30: Evening Walk / Break`);
-         activities.push(`📝 19:30 - 21:00: Revision of Backlog / Old Topics`);
-         activities.push(`🍲 21:00 - 21:45: Dinner`);
-         activities.push(`🌙 21:45 - 22:45: NCERT Reading / Error Log Review`);
+         // Travel back & Lunch
+         activities.push(`${formatTimeRange(currentTime, 90)}: 🥗 Travel Back, Lunch & Rest`);
+         currentTime += 90;
+
+         // Post-Coaching Revision (Critical)
+         activities.push(`${formatTimeRange(currentTime, 120)}: 🔄 **Class Revision** (Physics/Chem/Maths notes)`);
+         currentTime += 120;
+         studyHours += 2;
+
+      } else if (isSchool) {
+         type = 'school';
+         // School duration
+         if (schoolStartMins > currentTime) {
+            // Quick morning study if time permits
+            const diff = schoolStartMins - currentTime;
+            if (diff >= 60) {
+               activities.push(`${formatTimeRange(currentTime, 60)}: 🧠 Quick Revision / Formulas`);
+               studyHours += 1;
+               currentTime += 60;
+            }
+         }
+         activities.push(`${formatTimeRange(schoolStartMins, schoolEndMins - schoolStartMins)}: 🏫 **School**`);
+         currentTime = schoolEndMins;
          
-         studyHours += (isSchool ? 4.5 : 4);
+         activities.push(`${formatTimeRange(currentTime, 60)}: 🥗 Lunch & Power Nap`);
+         currentTime += 60;
+
+      } else {
+         // Dummy School / Holiday Morning
+         type = 'holiday';
+         const sub1 = subjects[subjectIndex % 3];
+         activities.push(`${formatTimeRange(currentTime, 150)}: 🚀 **Deep Work Session 1** - ${sub1}`);
+         currentTime += 150;
+         studyHours += 2.5;
+         
+         activities.push(`${formatTimeRange(currentTime, 45)}: 🍳 Breakfast Break`);
+         currentTime += 45;
+
+         const sub2 = subjects[(subjectIndex + 1) % 3];
+         activities.push(`${formatTimeRange(currentTime, 150)}: ✏️ **Problem Solving Session** - ${sub2}`);
+         currentTime += 150;
+         studyHours += 2.5;
+
+         activities.push(`${formatTimeRange(currentTime, 60)}: 🥗 Lunch Break`);
+         currentTime += 60;
+      }
+
+      // 3. Afternoon / Evening Block
+      
+      // If Evening Coaching
+      if (!isMorningCoaching && isCoaching) {
+         type = 'coaching';
+         
+         // Time between current and coaching start
+         const timeUntilCoaching = coachingStartMins - currentTime;
+         
+         if (timeUntilCoaching > 60) {
+            activities.push(`${formatTimeRange(currentTime, timeUntilCoaching - 30)}: 🎒 Homework / Pre-class Prep`);
+            studyHours += (timeUntilCoaching - 30) / 60;
+         }
+         
+         activities.push(`${formatTimeRange(coachingStartMins, coachingEndMins - coachingStartMins)}: 🏢 **Coaching Classes**`);
+         currentTime = coachingEndMins;
+
+         activities.push(`${formatTimeRange(currentTime, 45)}: 🍲 Dinner & Relax`);
+         currentTime += 45;
+
+         activities.push(`${formatTimeRange(currentTime, 90)}: 🔄 **Daily Revision** (Revise today's notes)`);
+         studyHours += 1.5;
+         currentTime += 90;
+
+      } else {
+         // Free Evening (Self Study)
+         // Calculate remaining time until dinner/bed
+         // Slot 1
+         const subject = subjects[(subjectIndex + (isSchool ? 0 : 2)) % 3];
+         if (!isSchool) subjectIndex++; // Rotate on dummy days
+
+         activities.push(`${formatTimeRange(currentTime, 120)}: 🚀 **Deep Work** - ${subject}`);
+         currentTime += 120;
+         studyHours += 2;
+
+         activities.push(`${formatTimeRange(currentTime, 30)}: ☕ Tea Break / Walk`);
+         currentTime += 30;
+
+         // Slot 2
+         activities.push(`${formatTimeRange(currentTime, 90)}: ✏️ Practice / Backlog`);
+         currentTime += 90;
+         studyHours += 1.5;
+
+         activities.push(`${formatTimeRange(currentTime, 45)}: 🍲 Dinner`);
+         currentTime += 45;
+      }
+
+      // 4. Night Cap
+      const minsUntilBed = bedMins - currentTime;
+      if (minsUntilBed > 0) {
+         activities.push(`${formatTimeRange(currentTime, Math.min(minsUntilBed, 60))}: 📖 NCERT Reading / Error Log`);
+         studyHours += Math.min(minsUntilBed, 60) / 60;
       }
     }
+
+    // Round study hours for neatness
+    studyHours = Math.round(studyHours * 10) / 10;
 
     schedule.push({
       day,
@@ -209,15 +314,20 @@ export const generateWeeklyTimetable = async (constraints: TimetableConstraints)
     });
   });
 
+  const coachingTypeStr = isMorningCoaching ? "Morning Batch" : "Evening Batch";
+
   return {
-    summary: `Balanced Routine: Prioritizes immediate revision on coaching days and subject rotation on free days.`,
+    summary: `Custom Schedule for ${coachingTypeStr}. Optimized for ${studyHoursPerWeek(schedule)} hours of self-study this week.`,
     schedule,
     guidelines: [
-      `Sleep: Strict sleep schedule ${sleepSchedule.bed} to ${sleepSchedule.wake} is non-negotiable for memory consolidation.`,
-      `Coaching Days: DO NOT touch new books. Only revise class notes and solve immediate HW.`,
-      `Non-Coaching Days: These are for 'Deep Work'. Switch mobile off during 2.5hr slots.`,
-      `Breaks: Take 5-10 min active breaks (walk/stretch) every 50 mins. Avoid scrolling.`,
-      `Subject Balance: If you studied Physics/Maths heavily today, start with Chemistry tomorrow.`
+      `Consistency: Your sleep schedule (${sleepSchedule.bed} - ${sleepSchedule.wake}) determines your focus. Stick to it.`,
+      `Coaching Days: The 2-hour post-class revision slot is the most important part of your day.`,
+      `Breaks: The schedule includes gaps. Use them to move around, not to scroll social media.`,
+      `Subject Rotation: Physics, Chemistry, and Maths are rotated on free days to prevent burnout.`
     ]
   };
+};
+
+const studyHoursPerWeek = (schedule: DailySchedule[]) => {
+  return Math.round(schedule.reduce((acc, curr) => acc + curr.hours, 0));
 };

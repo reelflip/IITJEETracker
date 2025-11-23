@@ -44,10 +44,10 @@ export const TimetableGenerator: React.FC = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div className="max-w-7xl mx-auto grid grid-cols-1 xl:grid-cols-4 gap-8">
       {/* Configuration Panel */}
-      <div className="lg:col-span-1 space-y-6">
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+      <div className="xl:col-span-1 space-y-6">
+        <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden sticky top-24">
           <div className="bg-gradient-to-r from-orange-500 to-red-500 p-6 text-white">
              <div className="flex items-center gap-2 mb-2">
                 <CalendarClock className="w-6 h-6 text-white" />
@@ -60,8 +60,8 @@ export const TimetableGenerator: React.FC = () => {
             
             {/* Coaching Section */}
             <div>
-              <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-3 flex items-center gap-2">
-                <BookOpen size={16} /> Coaching Schedule
+              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                <BookOpen size={14} /> Coaching Schedule
               </h3>
               <div className="flex flex-wrap gap-2 mb-4">
                 {daysOfWeek.map(day => (
@@ -95,8 +95,8 @@ export const TimetableGenerator: React.FC = () => {
             {/* School Section */}
             <div>
               <div className="flex justify-between items-center mb-3">
-                <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
-                  <School size={16} /> School / College
+                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                  <School size={14} /> School / College
                 </h3>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" checked={attendsSchool} onChange={e => setAttendsSchool(e.target.checked)} className="sr-only peer" />
@@ -107,24 +107,24 @@ export const TimetableGenerator: React.FC = () => {
               <div className={`transition-all duration-300 ${attendsSchool ? 'opacity-100 max-h-40' : 'opacity-50 max-h-40 pointer-events-none grayscale'}`}>
                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-xs text-gray-500 mb-1 block">School Starts</label>
+                      <label className="text-xs text-gray-500 mb-1 block">Starts</label>
                       <input type="time" value={schoolStart} onChange={e => setSchoolStart(e.target.value)} className="w-full text-sm border p-2 rounded" />
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 mb-1 block">School Ends</label>
+                      <label className="text-xs text-gray-500 mb-1 block">Ends</label>
                       <input type="time" value={schoolEnd} onChange={e => setSchoolEnd(e.target.value)} className="w-full text-sm border p-2 rounded" />
                     </div>
                  </div>
               </div>
-              {!attendsSchool && <p className="text-xs text-green-600 mt-2 font-medium">Dummy school selected. Full day available.</p>}
+              {!attendsSchool && <p className="text-xs text-green-600 mt-2 font-medium">Dummy school mode active.</p>}
             </div>
 
             <hr className="border-gray-100" />
 
             {/* Sleep Section */}
             <div>
-              <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-3 flex items-center gap-2">
-                <Moon size={16} /> Sleep Schedule
+              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                <Moon size={14} /> Sleep Cycle
               </h3>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -151,69 +151,97 @@ export const TimetableGenerator: React.FC = () => {
       </div>
 
       {/* Result Panel */}
-      <div className="lg:col-span-2">
+      <div className="xl:col-span-3">
         {result ? (
-           <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 h-full animate-in fade-in slide-in-from-right-4 duration-500 flex flex-col">
-             <div className="flex justify-between items-center border-b pb-4 mb-6">
+           <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 min-h-[600px] animate-in fade-in slide-in-from-right-4 duration-500 flex flex-col">
+             <div className="flex flex-col md:flex-row justify-between md:items-center border-b pb-4 mb-6 gap-4">
                 <div>
-                  <h3 className="text-2xl font-bold text-gray-800">Your Weekly Schedule</h3>
+                  <h3 className="text-2xl font-bold text-gray-800">Weekly Schedule</h3>
                   <p className="text-sm text-gray-500 mt-1">{result.summary}</p>
                 </div>
-                <button onClick={() => window.print()} className="text-gray-500 hover:text-bt-blue flex items-center gap-2 text-sm font-medium">
-                   <Save size={16} /> Print
+                <button onClick={() => window.print()} className="text-gray-500 hover:text-bt-blue flex items-center gap-2 text-sm font-medium border px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
+                   <Save size={16} /> Print / Save PDF
                 </button>
              </div>
              
-             <div className="flex-1 space-y-4">
-                {/* Timetable Grid */}
-                <div className="grid gap-3">
-                  {result.schedule.map((day, idx) => (
-                    <div 
-                      key={idx} 
-                      className={`p-4 rounded-lg border flex flex-col md:flex-row gap-4 md:items-center transition-all hover:shadow-md ${
-                        day.type === 'coaching' ? 'bg-blue-50 border-blue-100' :
-                        day.type === 'exam' ? 'bg-orange-50 border-orange-100' :
-                        'bg-white border-gray-200'
-                      }`}
-                    >
-                      <div className="md:w-16 flex-shrink-0">
-                         <span className="text-lg font-bold text-gray-800">{day.day}</span>
-                         {day.type === 'coaching' && <span className="block text-[10px] uppercase font-bold text-blue-600">Coaching</span>}
-                         {day.type === 'exam' && <span className="block text-[10px] uppercase font-bold text-orange-600">Test Day</span>}
-                      </div>
-                      
-                      <div className="flex-1 space-y-1">
-                         {day.activities.map((act, i) => (
-                           <div key={i} className="text-sm text-gray-700 flex items-start gap-2">
-                             <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0"></span>
-                             <span>{act}</span>
-                           </div>
-                         ))}
-                      </div>
+             <div className="flex-1 overflow-x-auto pb-4">
+                {/* Timetable Table */}
+                <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg overflow-hidden">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-32 border-r">Day</th>
+                      <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Detailed Timeline</th>
+                      <th scope="col" className="px-6 py-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-32 border-l">Productivity</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {result.schedule.map((day, idx) => (
+                      <tr key={idx} className={`hover:bg-gray-50 transition-colors ${
+                        day.type === 'coaching' ? 'bg-blue-50/20' : 
+                        day.type === 'exam' ? 'bg-orange-50/20' : ''
+                      }`}>
+                        <td className="px-6 py-5 whitespace-nowrap border-r align-top bg-gray-50/30">
+                          <div className="flex flex-col">
+                            <span className="text-lg font-bold text-gray-900">{day.day}</span>
+                            {day.type === 'coaching' && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-blue-100 text-blue-800 mt-1 w-fit">
+                                Class Day
+                              </span>
+                            )}
+                            {day.type === 'exam' && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-orange-100 text-orange-800 mt-1 w-fit">
+                                Test Day
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 align-top">
+                          <ul className="space-y-3">
+                             {day.activities.map((act, i) => {
+                               // Heuristic for styling: bold time ranges
+                               const [time, desc] = act.split(': ');
+                               const isBold = desc?.includes('**');
+                               const cleanDesc = desc?.replace(/\*\*/g, '');
 
-                      {day.hours > 0 && (
-                        <div className="md:text-right flex-shrink-0">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-white border border-gray-200 text-gray-600">
-                             {day.hours}h Self Study
-                          </span>
-                        </div>
-                      )}
+                               return (
+                                 <li key={i} className="text-sm text-gray-700 flex items-start gap-3">
+                                   <span className="font-mono font-medium text-xs text-gray-500 mt-0.5 min-w-[90px]">{time}</span>
+                                   <span className={`${isBold ? 'font-semibold text-gray-900' : ''}`}>{cleanDesc}</span>
+                                 </li>
+                               );
+                             })}
+                          </ul>
+                        </td>
+                        <td className="px-6 py-5 whitespace-nowrap text-center align-top border-l bg-gray-50/30">
+                           {day.hours > 0 ? (
+                             <div className="flex flex-col items-center justify-center">
+                               <span className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 font-bold text-sm border border-emerald-200 mb-1">
+                                 {day.hours}h
+                               </span>
+                               <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Self Study</span>
+                             </div>
+                           ) : (
+                             <span className="text-gray-300">-</span>
+                           )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+             </div>
+
+             {/* Guidelines */}
+             <div className="mt-8 bg-blue-50/50 rounded-lg p-6 border border-blue-100">
+                <h4 className="text-sm font-bold text-blue-800 flex items-center gap-2 mb-3">
+                  <AlertCircle size={16} className="text-blue-500" /> Success Guidelines
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
+                  {result.guidelines.map((guide, i) => (
+                    <div key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                      <span className="text-bt-blue font-bold mt-1">•</span>
+                      <span>{guide}</span>
                     </div>
                   ))}
-                </div>
-
-                {/* Guidelines */}
-                <div className="mt-8 bg-gray-50 rounded-lg p-5 border border-gray-200">
-                  <h4 className="text-sm font-bold text-gray-800 flex items-center gap-2 mb-3">
-                    <AlertCircle size={16} className="text-gray-500" /> Key Guidelines
-                  </h4>
-                  <ul className="space-y-2">
-                    {result.guidelines.map((guide, i) => (
-                      <li key={i} className="text-sm text-gray-600 pl-4 border-l-2 border-gray-300">
-                        {guide}
-                      </li>
-                    ))}
-                  </ul>
                 </div>
              </div>
            </div>
