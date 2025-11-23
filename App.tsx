@@ -35,13 +35,13 @@ function App() {
     return <LoginPage onLogin={handleLogin} />;
   }
 
-  // Passing key forces remount when user changes
   return (
     <Dashboard 
       key={currentUser.id} 
-      userId={currentUser.email} // Use email as storage key for progress
+      userId={currentUser.email} 
       userName={currentUser.name}
       userCoaching={currentUser.coachingInstitute}
+      userRole={currentUser.role} // Pass role
       onLogout={handleLogout} 
     />
   );

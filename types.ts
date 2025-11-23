@@ -22,8 +22,9 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  coachingInstitute?: string; // New field
-  passwordHash: string; // Simulated hash
+  coachingInstitute?: string; 
+  passwordHash: string; 
+  role: 'admin' | 'student'; // Added Role
 }
 
 export const COACHING_INSTITUTES = [

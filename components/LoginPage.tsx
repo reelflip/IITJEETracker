@@ -159,6 +159,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
               </button>
             </p>
           </div>
+
+          <div className="mt-8 text-center border-t pt-4">
+             <p className="text-xs text-gray-400">Admin Demo: admin@prep.com / admin123</p>
+          </div>
         </div>
       </div>
     </div>
