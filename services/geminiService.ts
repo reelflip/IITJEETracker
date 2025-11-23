@@ -116,6 +116,9 @@ export const generateWeeklyTimetable = async (constraints: TimetableConstraints)
   const { coachingDays, coachingTime, schoolDetails, sleepSchedule } = constraints;
   
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const subjects = ['Physics', 'Maths', 'Chemistry']; // Order of rotation
+  let subjectIndex = 0; // Tracks which subject is next for Deep Work
+
   const schedule: DailySchedule[] = [];
 
   days.forEach(day => {
@@ -130,32 +133,71 @@ export const generateWeeklyTimetable = async (constraints: TimetableConstraints)
     if (isSunday) {
       type = 'exam';
       activities = [
-        "09:00 - 12:00: 📝 Full Syllabus / Part Test",
-        "14:00 - 16:00: 🔍 Test Analysis (Crucial)",
-        "17:00 - 20:00: 🔄 Revision of Weak Areas"
+        "08:00 - 09:00: 🧠 Quick Formula Revision",
+        "09:00 - 12:00: 📝 Full Syllabus / Part Test (Simulate Exam Hall)",
+        "12:00 - 14:00: 🥗 Lunch & Brain Rest",
+        "14:00 - 16:00: 🔍 **Critical**: Test Analysis (Identify Silly Mistakes)",
+        "16:30 - 19:30: 🔄 Revision of Weak Areas found in Test",
+        "20:00 - 21:00: 📅 Plan next week's targets"
       ];
       studyHours = 6;
     } else {
-      // Morning Slot
+      // --- Morning Slots ---
       if (isSchool) {
         activities.push(`🏫 School (${schoolDetails.start} - ${schoolDetails.end})`);
         type = 'school';
       } else {
-        activities.push(`🏠 Morning Study (08:00 - 13:00): Problem Solving (Maths/Physics)`);
-        studyHours += 5;
-        type = 'holiday'; // No school
+        // Dummy School / Holiday
+        type = 'holiday';
+        const sub1 = subjects[subjectIndex % 3];
+        const sub2 = subjects[(subjectIndex + 1) % 3];
+        
+        activities.push(`🌅 06:30 - 08:30: 🧘‍♂️ Morning Ritual & Inorganic Chemistry (Memorization)`);
+        activities.push(`🧠 09:00 - 11:30: 🚀 Deep Work - ${sub1} (Theory + Examples)`);
+        activities.push(`☕ 11:30 - 12:00: Break`);
+        activities.push(`✏️ 12:00 - 14:30: 🧩 Problem Solving - ${sub2} (Timed Practice)`);
+        studyHours += 5; // Morning productivity
       }
 
-      // Afternoon/Evening Slot
+      // --- Afternoon Buffer ---
+      activities.push(`🔋 14:30 - 16:00: Lunch, Power Nap (20m) & Recharge`);
+
+      // --- Evening / Night Slots ---
       if (isCoaching) {
          type = 'coaching';
+         // Before Coaching
+         activities.push(`🎒 16:00 - ${coachingTime.start}: Pre-class review (Last lecture notes)`);
+         
+         // Coaching
          activities.push(`🏢 Coaching (${coachingTime.start} - ${coachingTime.end})`);
-         activities.push(`🌙 Night: Revise class notes + 1 hr HW`);
-         studyHours += 1;
+         
+         // Post Coaching - CRITICAL REVISION
+         activities.push(`🍲 Dinner Break (45 mins)`);
+         activities.push(`🔄 **Priority**: Revise Today's Class Notes (1.5 hrs)`);
+         activities.push(`✍️ Solve 10-15 HW Questions based on today's class (1 hr)`);
+         
+         studyHours += 2.5; 
       } else {
-         activities.push(`💪 Evening Study: Deep Work (4 hours) - Alternating Subjects`);
-         activities.push(`🌙 Night: Revision + NCERT Reading`);
-         studyHours += 4;
+         // Non-Coaching Evening (Deep Work)
+         // Calculate which subject to focus on based on rotation
+         let eveningSubject;
+         if (isSchool) {
+             // If school day, we need to fit 2 subjects in evening
+             eveningSubject = `${subjects[subjectIndex % 3]} & ${subjects[(subjectIndex + 1) % 3]}`;
+             subjectIndex += 2; // Advance by 2
+         } else {
+             // If dummy school, we did 2 subjects in morning, do the 3rd one now
+             eveningSubject = subjects[(subjectIndex + 2) % 3];
+             subjectIndex += 1; // Advance rotation
+         }
+
+         activities.push(`🚀 16:30 - 19:00: Deep Work - ${eveningSubject}`);
+         activities.push(`☕ 19:00 - 19:30: Evening Walk / Break`);
+         activities.push(`📝 19:30 - 21:00: Revision of Backlog / Old Topics`);
+         activities.push(`🍲 21:00 - 21:45: Dinner`);
+         activities.push(`🌙 21:45 - 22:45: NCERT Reading / Error Log Review`);
+         
+         studyHours += (isSchool ? 4.5 : 4);
       }
     }
 
@@ -168,13 +210,14 @@ export const generateWeeklyTimetable = async (constraints: TimetableConstraints)
   });
 
   return {
-    summary: `Goal: Maximize self-study while balancing Coaching & School.`,
+    summary: `Balanced Routine: Prioritizes immediate revision on coaching days and subject rotation on free days.`,
     schedule,
     guidelines: [
-      `Sleep: Ensure you sleep from ${sleepSchedule.bed} to ${sleepSchedule.wake}. Consistency is key.`,
-      `Breaks: Take 10 min breaks every 50 mins of study.`,
-      `Coaching Days: Focus on revising what was taught same-day.`,
-      `Non-Coaching Days: These are your goldmines. Aim for 8+ hours of self-study.`
+      `Sleep: Strict sleep schedule ${sleepSchedule.bed} to ${sleepSchedule.wake} is non-negotiable for memory consolidation.`,
+      `Coaching Days: DO NOT touch new books. Only revise class notes and solve immediate HW.`,
+      `Non-Coaching Days: These are for 'Deep Work'. Switch mobile off during 2.5hr slots.`,
+      `Breaks: Take 5-10 min active breaks (walk/stretch) every 50 mins. Avoid scrolling.`,
+      `Subject Balance: If you studied Physics/Maths heavily today, start with Chemistry tomorrow.`
     ]
   };
 };
