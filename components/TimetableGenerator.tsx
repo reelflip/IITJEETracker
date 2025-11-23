@@ -151,10 +151,10 @@ export const TimetableGenerator: React.FC = () => {
       </div>
 
       {/* Result Panel */}
-      <div className="xl:col-span-3">
+      <div className="xl:col-span-3 print:col-span-4">
         {result ? (
            <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 min-h-[600px] animate-in fade-in slide-in-from-right-4 duration-500 flex flex-col">
-             <div className="flex flex-col md:flex-row justify-between md:items-center border-b pb-4 mb-6 gap-4">
+             <div className="flex flex-col md:flex-row justify-between md:items-center border-b pb-4 mb-6 gap-4 print:hidden">
                 <div>
                   <h3 className="text-2xl font-bold text-gray-800">Weekly Schedule</h3>
                   <p className="text-sm text-gray-500 mt-1">{result.summary}</p>
@@ -164,19 +164,25 @@ export const TimetableGenerator: React.FC = () => {
                 </button>
              </div>
              
+             {/* Printable Header */}
+             <div className="hidden print:block mb-6">
+                <h1 className="text-3xl font-bold text-gray-900">JEE Preparation Timetable</h1>
+                <p className="text-gray-600">{result.summary}</p>
+             </div>
+
              <div className="flex-1 overflow-x-auto pb-4">
                 {/* Timetable Table */}
                 <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg overflow-hidden">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-32 border-r">Day</th>
-                      <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Detailed Timeline</th>
-                      <th scope="col" className="px-6 py-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-32 border-l">Productivity</th>
+                      <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-32 border-r print:w-24">Day</th>
+                      <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Timeline</th>
+                      <th scope="col" className="px-6 py-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-32 border-l print:w-24">Effort</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {result.schedule.map((day, idx) => (
-                      <tr key={idx} className={`hover:bg-gray-50 transition-colors ${
+                      <tr key={idx} className={`hover:bg-gray-50 transition-colors break-inside-avoid ${
                         day.type === 'coaching' ? 'bg-blue-50/20' : 
                         day.type === 'exam' ? 'bg-orange-50/20' : ''
                       }`}>
@@ -184,13 +190,13 @@ export const TimetableGenerator: React.FC = () => {
                           <div className="flex flex-col">
                             <span className="text-lg font-bold text-gray-900">{day.day}</span>
                             {day.type === 'coaching' && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-blue-100 text-blue-800 mt-1 w-fit">
-                                Class Day
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-blue-100 text-blue-800 mt-1 w-fit print:border print:border-blue-200">
+                                Class
                               </span>
                             )}
                             {day.type === 'exam' && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-orange-100 text-orange-800 mt-1 w-fit">
-                                Test Day
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-orange-100 text-orange-800 mt-1 w-fit print:border print:border-orange-200">
+                                Test
                               </span>
                             )}
                           </div>
@@ -202,11 +208,16 @@ export const TimetableGenerator: React.FC = () => {
                                const [time, desc] = act.split(': ');
                                const isBold = desc?.includes('**');
                                const cleanDesc = desc?.replace(/\*\*/g, '');
+                               const isCoachingActivity = cleanDesc?.includes('Coaching');
+                               const isSchoolActivity = cleanDesc?.includes('School');
 
                                return (
-                                 <li key={i} className="text-sm text-gray-700 flex items-start gap-3">
+                                 <li key={i} className={`text-sm flex items-start gap-3 ${
+                                    isCoachingActivity ? 'text-blue-800 bg-blue-50 p-1 rounded -ml-1' :
+                                    isSchoolActivity ? 'text-gray-500 italic' : 'text-gray-700'
+                                 }`}>
                                    <span className="font-mono font-medium text-xs text-gray-500 mt-0.5 min-w-[90px]">{time}</span>
-                                   <span className={`${isBold ? 'font-semibold text-gray-900' : ''}`}>{cleanDesc}</span>
+                                   <span className={`${isBold ? 'font-bold text-gray-900' : ''}`}>{cleanDesc}</span>
                                  </li>
                                );
                              })}
@@ -215,7 +226,7 @@ export const TimetableGenerator: React.FC = () => {
                         <td className="px-6 py-5 whitespace-nowrap text-center align-top border-l bg-gray-50/30">
                            {day.hours > 0 ? (
                              <div className="flex flex-col items-center justify-center">
-                               <span className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 font-bold text-sm border border-emerald-200 mb-1">
+                               <span className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 font-bold text-sm border border-emerald-200 mb-1 print:border-gray-300">
                                  {day.hours}h
                                </span>
                                <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Self Study</span>
@@ -231,7 +242,7 @@ export const TimetableGenerator: React.FC = () => {
              </div>
 
              {/* Guidelines */}
-             <div className="mt-8 bg-blue-50/50 rounded-lg p-6 border border-blue-100">
+             <div className="mt-8 bg-blue-50/50 rounded-lg p-6 border border-blue-100 break-inside-avoid">
                 <h4 className="text-sm font-bold text-blue-800 flex items-center gap-2 mb-3">
                   <AlertCircle size={16} className="text-blue-500" /> Success Guidelines
                 </h4>
