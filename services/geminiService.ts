@@ -1,4 +1,5 @@
-import { PlanRequest, Question, TimetableConstraints, Subject, Difficulty } from "../types";
+
+import { PlanRequest, Question, TimetableConstraints, Subject, Difficulty, WeeklySchedule, DailySchedule } from "../types";
 import { MOCK_QUESTION_DB } from "../constants";
 
 // Helper to simulate "processing" time for a realistic feel
@@ -108,56 +109,72 @@ export const generatePracticeQuestions = async (topicName: string, difficulty: s
 
 /**
  * Offline Timetable Generator
- * Uses a rule-based engine to schedule slots.
+ * Returns a structured object instead of raw markdown for better rendering control.
  */
-export const generateWeeklyTimetable = async (constraints: TimetableConstraints): Promise<string> => {
+export const generateWeeklyTimetable = async (constraints: TimetableConstraints): Promise<WeeklySchedule> => {
   await delay(500);
   const { coachingDays, coachingTime, schoolDetails, sleepSchedule } = constraints;
   
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  
-  let md = `## 🗓️ Weekly Study Schedule\n\n`;
-  md += `**Goal:** Maximize self-study while balancing Coaching & School.\n`;
-  
-  // Calculate slots
-  md += `| Day | Routine & Study Plan |\n`;
-  md += `|---|---|\n`;
+  const schedule: DailySchedule[] = [];
 
   days.forEach(day => {
     const isCoaching = coachingDays.includes(day);
     const isSchool = schoolDetails.attending && day !== 'Sun';
     const isSunday = day === 'Sun';
-
-    let schedule = "";
+    
+    let activities: string[] = [];
+    let type: DailySchedule['type'] = 'school';
+    let studyHours = 0;
 
     if (isSunday) {
-      schedule = `**Mock Test Day**<br/>• 09:00 - 12:00: 📝 **Full Syllabus/Part Test**<br/>• 14:00 - 16:00: 🔍 **Test Analysis** (Crucial)<br/>• 17:00 - 20:00: 🔄 **Revision of Weak Areas**`;
+      type = 'exam';
+      activities = [
+        "09:00 - 12:00: 📝 Full Syllabus / Part Test",
+        "14:00 - 16:00: 🔍 Test Analysis (Crucial)",
+        "17:00 - 20:00: 🔄 Revision of Weak Areas"
+      ];
+      studyHours = 6;
     } else {
       // Morning Slot
       if (isSchool) {
-        schedule += `🏫 **School** (${schoolDetails.start} - ${schoolDetails.end})<br/>`;
+        activities.push(`🏫 School (${schoolDetails.start} - ${schoolDetails.end})`);
+        type = 'school';
       } else {
-        schedule += `🏠 **Morning Study** (08:00 - 13:00): Problem Solving (Maths/Physics)<br/>`;
+        activities.push(`🏠 Morning Study (08:00 - 13:00): Problem Solving (Maths/Physics)`);
+        studyHours += 5;
+        type = 'holiday'; // No school
       }
 
       // Afternoon/Evening Slot
       if (isCoaching) {
-         schedule += `🏢 **Coaching** (${coachingTime.start} - ${coachingTime.end})<br/>`;
-         schedule += `🌙 **Night**: Revise class notes + 1 hr HW`;
+         type = 'coaching';
+         activities.push(`🏢 Coaching (${coachingTime.start} - ${coachingTime.end})`);
+         activities.push(`🌙 Night: Revise class notes + 1 hr HW`);
+         studyHours += 1;
       } else {
-         schedule += `💪 **Evening Study**: Deep Work (4 hours) - Alternating Subjects<br/>`;
-         schedule += `🌙 **Night**: Revision + NCERT Reading`;
+         activities.push(`💪 Evening Study: Deep Work (4 hours) - Alternating Subjects`);
+         activities.push(`🌙 Night: Revision + NCERT Reading`);
+         studyHours += 4;
       }
     }
 
-    md += `| **${day}** | ${schedule} |\n`;
+    schedule.push({
+      day,
+      activities,
+      type,
+      hours: studyHours
+    });
   });
 
-  md += `\n### 💡 Key Guidelines\n`;
-  md += `1. **Sleep:** Ensure you sleep from ${sleepSchedule.bed} to ${sleepSchedule.wake}. Consistency is key.\n`;
-  md += `2. **Breaks:** Take 10 min breaks every 50 mins of study.\n`;
-  md += `3. **Coaching Days:** Focus on revising what was taught same-day.\n`;
-  md += `4. **Non-Coaching Days:** These are your goldmines. Aim for 8+ hours of self-study.\n`;
-
-  return md;
+  return {
+    summary: `Goal: Maximize self-study while balancing Coaching & School.`,
+    schedule,
+    guidelines: [
+      `Sleep: Ensure you sleep from ${sleepSchedule.bed} to ${sleepSchedule.wake}. Consistency is key.`,
+      `Breaks: Take 10 min breaks every 50 mins of study.`,
+      `Coaching Days: Focus on revising what was taught same-day.`,
+      `Non-Coaching Days: These are your goldmines. Aim for 8+ hours of self-study.`
+    ]
+  };
 };

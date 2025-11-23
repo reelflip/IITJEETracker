@@ -1,12 +1,12 @@
 
 import React, { useState } from 'react';
 import { generateWeeklyTimetable } from '../services/geminiService';
-import { CalendarClock, Loader2, Save, School, Moon, BookOpen, Clock } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
+import { CalendarClock, Loader2, Save, School, Moon, BookOpen, Clock, AlertCircle } from 'lucide-react';
+import { WeeklySchedule } from '../types';
 
 export const TimetableGenerator: React.FC = () => {
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
+  const [result, setResult] = useState<WeeklySchedule | null>(null);
 
   // Form State
   const [coachingDays, setCoachingDays] = useState<string[]>(['Mon', 'Wed', 'Fri']);
@@ -153,15 +153,68 @@ export const TimetableGenerator: React.FC = () => {
       {/* Result Panel */}
       <div className="lg:col-span-2">
         {result ? (
-           <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 h-full animate-in fade-in slide-in-from-right-4 duration-500">
+           <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 h-full animate-in fade-in slide-in-from-right-4 duration-500 flex flex-col">
              <div className="flex justify-between items-center border-b pb-4 mb-6">
-                <h3 className="text-2xl font-bold text-gray-800">Your Weekly Schedule</h3>
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-800">Your Weekly Schedule</h3>
+                  <p className="text-sm text-gray-500 mt-1">{result.summary}</p>
+                </div>
                 <button onClick={() => window.print()} className="text-gray-500 hover:text-bt-blue flex items-center gap-2 text-sm font-medium">
-                   <Save size={16} /> Print / Save PDF
+                   <Save size={16} /> Print
                 </button>
              </div>
-             <div className="prose prose-orange max-w-none prose-headings:font-bold prose-h3:text-lg prose-p:text-gray-600 prose-li:text-gray-600" style={{fontSize: '0.95rem'}}>
-               <ReactMarkdown>{result}</ReactMarkdown>
+             
+             <div className="flex-1 space-y-4">
+                {/* Timetable Grid */}
+                <div className="grid gap-3">
+                  {result.schedule.map((day, idx) => (
+                    <div 
+                      key={idx} 
+                      className={`p-4 rounded-lg border flex flex-col md:flex-row gap-4 md:items-center transition-all hover:shadow-md ${
+                        day.type === 'coaching' ? 'bg-blue-50 border-blue-100' :
+                        day.type === 'exam' ? 'bg-orange-50 border-orange-100' :
+                        'bg-white border-gray-200'
+                      }`}
+                    >
+                      <div className="md:w-16 flex-shrink-0">
+                         <span className="text-lg font-bold text-gray-800">{day.day}</span>
+                         {day.type === 'coaching' && <span className="block text-[10px] uppercase font-bold text-blue-600">Coaching</span>}
+                         {day.type === 'exam' && <span className="block text-[10px] uppercase font-bold text-orange-600">Test Day</span>}
+                      </div>
+                      
+                      <div className="flex-1 space-y-1">
+                         {day.activities.map((act, i) => (
+                           <div key={i} className="text-sm text-gray-700 flex items-start gap-2">
+                             <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0"></span>
+                             <span>{act}</span>
+                           </div>
+                         ))}
+                      </div>
+
+                      {day.hours > 0 && (
+                        <div className="md:text-right flex-shrink-0">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-white border border-gray-200 text-gray-600">
+                             {day.hours}h Self Study
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Guidelines */}
+                <div className="mt-8 bg-gray-50 rounded-lg p-5 border border-gray-200">
+                  <h4 className="text-sm font-bold text-gray-800 flex items-center gap-2 mb-3">
+                    <AlertCircle size={16} className="text-gray-500" /> Key Guidelines
+                  </h4>
+                  <ul className="space-y-2">
+                    {result.guidelines.map((guide, i) => (
+                      <li key={i} className="text-sm text-gray-600 pl-4 border-l-2 border-gray-300">
+                        {guide}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
              </div>
            </div>
         ) : (

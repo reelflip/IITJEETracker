@@ -67,3 +67,17 @@ export interface TimetableConstraints {
   schoolDetails: { attending: boolean; start: string; end: string };
   sleepSchedule: { wake: string; bed: string };
 }
+
+// New interfaces for Structured Timetable
+export interface DailySchedule {
+  day: string;
+  activities: string[];
+  type: 'coaching' | 'school' | 'holiday' | 'exam';
+  hours: number;
+}
+
+export interface WeeklySchedule {
+  summary: string;
+  schedule: DailySchedule[];
+  guidelines: string[];
+}
