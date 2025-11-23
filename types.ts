@@ -23,9 +23,12 @@ export interface User {
   name: string;
   email: string;
   coachingInstitute?: string;
-  targetYear?: string; // Added Target Year
+  targetYear?: string;
   passwordHash: string; 
-  role: 'admin' | 'student'; 
+  role: 'admin' | 'student';
+  // New fields for recovery
+  securityQuestion?: string;
+  securityAnswer?: string;
 }
 
 export const COACHING_INSTITUTES = [
@@ -44,13 +47,22 @@ export const COACHING_INSTITUTES = [
   "Self Study / Other"
 ];
 
+export const SECURITY_QUESTIONS = [
+  "What is the name of your first pet?",
+  "What is your mother's maiden name?",
+  "What city were you born in?",
+  "What is your favorite food?",
+  "What is the name of your elementary school?",
+  "Who is your favorite superhero?"
+];
+
 export interface Topic {
   id: string;
   name: string;
   subject: Subject;
-  phase: number; // 1-6 for a comprehensive 2-year course
+  phase: number; 
   estimatedHours: number;
-  theorySummary?: string; // New field for basic theory notes
+  theorySummary?: string;
 }
 
 export interface ExerciseProgress {
@@ -62,11 +74,9 @@ export interface TopicProgress {
   topicId: string;
   status: Status;
   notes?: string;
-  // Fixed 4 exercises as per requirement
   exercises: [ExerciseProgress, ExerciseProgress, ExerciseProgress, ExerciseProgress];
 }
 
-// New Interface for Online Quiz Stats
 export interface TopicPracticeStats {
   topicId: string;
   attempts: number;
@@ -77,7 +87,7 @@ export interface PlanRequest {
   topics: string[];
   daysAvailable: number;
   hoursPerDay: number;
-  focusArea: string; // e.g., "Problem Solving", "Theory Revision"
+  focusArea: string; 
 }
 
 export interface Question {
@@ -95,7 +105,6 @@ export interface TimetableConstraints {
   sleepSchedule: { wake: string; bed: string };
 }
 
-// New interfaces for Structured Timetable
 export interface DailySchedule {
   day: string;
   activities: string[];

@@ -13,8 +13,6 @@ const seedAdmin = () => {
         const usersStr = localStorage.getItem(USERS_STORAGE_KEY);
         const users: User[] = usersStr ? JSON.parse(usersStr) : [];
         
-        // Remove old admin(s) if exists to ensure credentials update takes effect
-        // We filter out any previous hardcoded admins to ensure the new one is authoritative
         const filteredUsers = users.filter(u => u.email !== 'admin@prep.com' && u.email !== 'vikas.00@gmail.com');
 
         const admin: User = {
@@ -24,7 +22,9 @@ const seedAdmin = () => {
             coachingInstitute: 'Head Office',
             targetYear: 'IIT JEE 2025',
             passwordHash: hashPassword('Ishika@123'),
-            role: 'admin'
+            role: 'admin',
+            securityQuestion: "What is the name of your first pet?",
+            securityAnswer: "admin" // Simple default answer
         };
         
         filteredUsers.push(admin);
@@ -51,12 +51,11 @@ export const authService = {
     const users = authService.getUsers();
     const newUsers = users.filter(u => u.email !== email);
     localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(newUsers));
-    // Also clean up their progress data
     localStorage.removeItem(`bt-jee-tracker-progress-${email}`);
     localStorage.removeItem(`bt-jee-tracker-practice-${email}`);
   },
 
-  register: (name: string, email: string, password: string, coaching: string, targetYear: string): { success: boolean; message?: string; user?: User } => {
+  register: (name: string, email: string, password: string, coaching: string, targetYear: string, question: string, answer: string): { success: boolean; message?: string; user?: User } => {
     const users = authService.getUsers();
     
     if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
@@ -70,13 +69,14 @@ export const authService = {
       coachingInstitute: coaching,
       targetYear: targetYear,
       passwordHash: hashPassword(password),
-      role: 'student'
+      role: 'student',
+      securityQuestion: question,
+      securityAnswer: answer.toLowerCase().trim()
     };
 
     users.push(newUser);
     localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
     
-    // Auto login
     authService.setSession(newUser);
     
     return { success: true, user: newUser };
@@ -96,6 +96,36 @@ export const authService = {
 
     authService.setSession(user);
     return { success: true, user };
+  },
+
+  // Recover Password Step 1: Get the question
+  getSecurityQuestion: (email: string): { success: boolean; question?: string; message?: string } => {
+    const users = authService.getUsers();
+    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    
+    if (!user) return { success: false, message: 'User not found.' };
+    if (!user.securityQuestion) return { success: false, message: 'No security question set for this account. Contact Admin.' };
+    
+    return { success: true, question: user.securityQuestion };
+  },
+
+  // Recover Password Step 2: Verify and Reset
+  resetPassword: (email: string, answer: string, newPassword: string): { success: boolean; message?: string } => {
+    const users = authService.getUsers();
+    const userIndex = users.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
+    
+    if (userIndex === -1) return { success: false, message: 'User not found.' };
+    
+    const user = users[userIndex];
+    if (user.securityAnswer !== answer.toLowerCase().trim()) {
+        return { success: false, message: 'Incorrect security answer.' };
+    }
+
+    // Update password
+    users[userIndex].passwordHash = hashPassword(newPassword);
+    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+
+    return { success: true, message: 'Password reset successfully. Please login.' };
   },
 
   setSession: (user: User) => {
