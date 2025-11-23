@@ -1,4 +1,3 @@
-
 import { PlanRequest, Question, TimetableConstraints, Subject, Difficulty } from "../types";
 import { MOCK_QUESTION_DB } from "../constants";
 
@@ -61,16 +60,18 @@ export const generateStudyPlan = async (request: PlanRequest): Promise<string> =
  * Offline Question Generator
  * Fetches from a local DB or generates templated questions.
  */
-export const generatePracticeQuestions = async (topicName: string, difficulty: string): Promise<Question[]> => {
+export const generatePracticeQuestions = async (topicName: string, difficulty: string, subject?: Subject): Promise<Question[]> => {
   await delay(600);
   
-  // Try to find subject from topic name (simple heuristic for the mock)
-  let subject: Subject | undefined;
-  if (['Kinematics', 'Newton', 'Work', 'Rotation', 'Gravitation', 'Electrostatics', 'Current', 'Optics', 'Units'].some(k => topicName.includes(k))) subject = Subject.PHYSICS;
-  else if (['Mole', 'Atomic', 'Bonding', 'Gaseous', 'Equilibrium', 'Organic', 'GOC', 'Isomerism', 'Block'].some(k => topicName.includes(k))) subject = Subject.CHEMISTRY;
-  else subject = Subject.MATHS;
+  // Robust subject detection
+  let derivedSubject = subject;
+  if (!derivedSubject) {
+      if (['Kinematics', 'Newton', 'Work', 'Rotation', 'Gravitation', 'Electrostatics', 'Current', 'Optics', 'Units'].some(k => topicName.includes(k))) derivedSubject = Subject.PHYSICS;
+      else if (['Mole', 'Atomic', 'Bonding', 'Gaseous', 'Equilibrium', 'Organic', 'GOC', 'Isomerism', 'Block'].some(k => topicName.includes(k))) derivedSubject = Subject.CHEMISTRY;
+      else derivedSubject = Subject.MATHS;
+  }
 
-  const dbQuestions = MOCK_QUESTION_DB[subject] || [];
+  const dbQuestions = (derivedSubject ? MOCK_QUESTION_DB[derivedSubject] : []) || [];
   
   // Return mixed real + templated questions to ensure we always have 5
   const results: Question[] = [];

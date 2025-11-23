@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { SYLLABUS_DATA, INITIAL_PROGRESS } from '../constants';
 import { TopicProgress, Subject, Status } from '../types';
@@ -18,29 +17,34 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [progress, setProgress] = useState<Record<string, TopicProgress>>(() => {
     // Load from user-specific local storage key
     const storageKey = `bt-jee-tracker-progress-${user}`;
-    const saved = localStorage.getItem(storageKey);
-    
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      // Data migration: ensure exercises structure exists
-      const migrated: Record<string, TopicProgress> = {};
-      Object.keys(parsed).forEach(key => {
-         const item = parsed[key];
-         if (!item.exercises) {
-            migrated[key] = {
-              ...item,
-              exercises: INITIAL_PROGRESS[key]?.exercises || [
-                { completed: 0, total: 60 },
-                { completed: 0, total: 50 },
-                { completed: 0, total: 40 },
-                { completed: 0, total: 20 }
-              ]
-            };
-         } else {
-           migrated[key] = item;
-         }
-      });
-      return { ...INITIAL_PROGRESS, ...migrated };
+    try {
+      const saved = localStorage.getItem(storageKey);
+      
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Data migration: ensure exercises structure exists
+        const migrated: Record<string, TopicProgress> = {};
+        Object.keys(parsed).forEach(key => {
+           const item = parsed[key];
+           if (!item.exercises) {
+              migrated[key] = {
+                ...item,
+                exercises: INITIAL_PROGRESS[key]?.exercises || [
+                  { completed: 0, total: 60 },
+                  { completed: 0, total: 50 },
+                  { completed: 0, total: 40 },
+                  { completed: 0, total: 20 }
+                ]
+              };
+           } else {
+             migrated[key] = item;
+           }
+        });
+        return { ...INITIAL_PROGRESS, ...migrated };
+      }
+    } catch (error) {
+      console.error("Failed to load progress:", error);
+      // Fallback to initial state if data is corrupted
     }
     return INITIAL_PROGRESS;
   });

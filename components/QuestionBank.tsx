@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { SYLLABUS_DATA } from '../constants';
 import { Difficulty, Question, Subject } from '../types';
@@ -22,7 +21,8 @@ export const QuestionBank: React.FC = () => {
     setQuestions([]);
     setRevealedSolutions({});
     
-    const results = await generatePracticeQuestions(selectedTopic, difficulty);
+    // Updated to pass selectedSubject for better offline accuracy
+    const results = await generatePracticeQuestions(selectedTopic, difficulty, selectedSubject as Subject);
     setQuestions(results);
     setLoading(false);
   };
