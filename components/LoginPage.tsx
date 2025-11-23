@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { LogIn, GraduationCap, User as UserIcon, ArrowRight, Lock, Mail, Building2, Calendar } from 'lucide-react';
+import { LogIn, GraduationCap, User as UserIcon, ArrowRight, Lock, Mail, Building2, Calendar, RotateCcw, AlertTriangle } from 'lucide-react';
 import { authService } from '../services/authService';
 import { User, COACHING_INSTITUTES } from '../types';
 
@@ -11,19 +11,19 @@ interface LoginPageProps {
 export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const [isSignUp, setIsSignUp] = useState(false);
   
+  // Generate next 4 years for dropdown
+  const currentYear = new Date().getFullYear();
+  const years = [currentYear, currentYear + 1, currentYear + 2, currentYear + 3].map(y => `IIT JEE ${y}`);
+
   // Form State
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [coaching, setCoaching] = useState(COACHING_INSTITUTES[0]);
-  const [targetYear, setTargetYear] = useState(new Date().getFullYear().toString());
+  const [targetYear, setTargetYear] = useState(years[0]);
   
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<React.ReactNode | null>(null);
   const [loading, setLoading] = useState(false);
-
-  // Generate next 4 years for dropdown
-  const currentYear = new Date().getFullYear();
-  const years = [currentYear, currentYear + 1, currentYear + 2, currentYear + 3].map(String);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +37,22 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         if (result.success && result.user) {
           onLogin(result.user);
         } else {
-          setError(result.message || 'Registration failed');
+          if (result.message === 'Email already registered.') {
+            setError(
+              <span className="flex items-center gap-2">
+                 Email exists. 
+                 <button 
+                   type="button" 
+                   onClick={() => setIsSignUp(false)} 
+                   className="underline font-bold hover:text-red-800"
+                 >
+                   Log In instead?
+                 </button>
+              </span>
+            );
+          } else {
+            setError(result.message || 'Registration failed');
+          }
           setLoading(false);
         }
       } else {
@@ -50,6 +65,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         }
       }
     }, 600);
+  };
+
+  const handleReset = () => {
+    if (confirm("FACTORY RESET: This will delete ALL users, progress, and settings. Are you sure?")) {
+        localStorage.clear();
+        window.location.reload();
+    }
   };
 
   return (
@@ -73,7 +95,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
             </div>
 
             {error && (
-              <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100 mb-4">
+              <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100 mb-4 animate-in slide-in-from-top-2">
                 {error}
               </div>
             )}
@@ -182,8 +204,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
             </p>
           </div>
 
-          <div className="mt-8 text-center border-t pt-4">
-             <p className="text-xs text-gray-400">Admin Demo: vikas.00@gmail.com / Ishika@123</p>
+          <div className="mt-8 pt-4 border-t border-gray-100 flex flex-col items-center gap-2">
+             <p className="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded">
+               Admin Demo: vikas.00@gmail.com / Ishika@123
+             </p>
+             <button 
+                onClick={handleReset}
+                className="text-[10px] text-red-400 hover:text-red-600 flex items-center gap-1 mt-2 opacity-60 hover:opacity-100 transition-opacity"
+             >
+                <AlertTriangle size={10} /> Reset App Data
+             </button>
           </div>
         </div>
       </div>

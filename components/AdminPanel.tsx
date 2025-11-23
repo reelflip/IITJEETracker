@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { authService } from '../services/authService';
 import { User, TopicProgress, Status } from '../types';
 import { SYLLABUS_DATA, INITIAL_PROGRESS } from '../constants';
-import { Trash2, Eye, ShieldCheck, GraduationCap, X, Search } from 'lucide-react';
+import { Trash2, Eye, ShieldCheck, GraduationCap, X, Search, Lock } from 'lucide-react';
 
 export const AdminPanel: React.FC = () => {
     const [users, setUsers] = useState<User[]>([]);
@@ -12,11 +12,15 @@ export const AdminPanel: React.FC = () => {
     const [userStats, setUserStats] = useState<any>(null);
 
     useEffect(() => {
-        // Load users (excluding admins themselves for safety/clutter)
-        setUsers(authService.getUsers().filter(u => u.role !== 'admin'));
+        // Load all users (removed filter to show admins as well)
+        setUsers(authService.getUsers());
     }, []);
 
-    const handleDelete = (email: string, name: string) => {
+    const handleDelete = (email: string, name: string, role: string) => {
+        if (role === 'admin') {
+            alert("Cannot delete an Administrator account.");
+            return;
+        }
         if(confirm(`Are you sure you want to delete student ${name}? This action cannot be undone.`)) {
             authService.deleteUser(email);
             setUsers(users.filter(u => u.email !== email));
@@ -68,11 +72,11 @@ export const AdminPanel: React.FC = () => {
                         <h2 className="text-2xl font-bold flex items-center gap-2">
                             <ShieldCheck className="text-green-400" /> Admin Console
                         </h2>
-                        <p className="text-gray-400 text-sm mt-1">Manage student accounts and view performance metrics</p>
+                        <p className="text-gray-400 text-sm mt-1">Manage users and view performance metrics</p>
                     </div>
                     <div className="bg-gray-800 px-4 py-2 rounded-lg border border-gray-700">
                         <span className="text-2xl font-bold text-white">{users.length}</span>
-                        <span className="text-xs text-gray-400 block uppercase tracking-wider">Active Students</span>
+                        <span className="text-xs text-gray-400 block uppercase tracking-wider">Total Users</span>
                     </div>
                 </div>
 
@@ -82,7 +86,7 @@ export const AdminPanel: React.FC = () => {
                         <Search className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
                         <input 
                             type="text" 
-                            placeholder="Search students by name, email or institute..." 
+                            placeholder="Search by name, email or institute..." 
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 outline-none"
@@ -94,7 +98,8 @@ export const AdminPanel: React.FC = () => {
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Student</th>
+                                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">User</th>
+                                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Role</th>
                                     <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Institute</th>
                                     <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Email</th>
                                     <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
@@ -103,26 +108,42 @@ export const AdminPanel: React.FC = () => {
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {filteredUsers.length === 0 ? (
                                     <tr>
-                                        <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
-                                            No students found matching your search.
+                                        <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                                            No users found matching your search.
                                         </td>
                                     </tr>
                                 ) : (
                                     filteredUsers.map((user) => (
-                                        <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                                        <tr key={user.id} className={`hover:bg-gray-50 transition-colors ${user.role === 'admin' ? 'bg-amber-50/30' : ''}`}>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="flex items-center">
-                                                    <div className="flex-shrink-0 h-10 w-10 bg-bt-blue rounded-full flex items-center justify-center text-white font-bold">
+                                                    <div className={`flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center text-white font-bold ${
+                                                        user.role === 'admin' ? 'bg-gray-800' : 'bg-bt-blue'
+                                                    }`}>
                                                         {user.name.charAt(0).toUpperCase()}
                                                     </div>
                                                     <div className="ml-4">
-                                                        <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                                                        <div className="text-sm font-medium text-gray-900 flex items-center gap-2">
+                                                            {user.name}
+                                                            {user.role === 'admin' && <ShieldCheck size={14} className="text-amber-600" />}
+                                                        </div>
                                                         <div className="text-xs text-gray-500">ID: {user.id.slice(0, 8)}</div>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                                {user.role === 'admin' ? (
+                                                    <span className="px-2 py-0.5 inline-flex text-xs leading-5 font-bold rounded-full bg-gray-200 text-gray-800 border border-gray-300">
+                                                        Admin
+                                                    </span>
+                                                ) : (
+                                                    <span className="px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 border border-green-200">
+                                                        Student
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className="text-sm text-gray-700">
                                                     {user.coachingInstitute || 'Unknown'}
                                                 </span>
                                             </td>
@@ -130,18 +151,26 @@ export const AdminPanel: React.FC = () => {
                                                 {user.email}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                <button 
-                                                    onClick={() => handleView(user)}
-                                                    className="text-indigo-600 hover:text-indigo-900 mr-4 inline-flex items-center gap-1"
-                                                >
-                                                    <Eye size={16} /> View
-                                                </button>
-                                                <button 
-                                                    onClick={() => handleDelete(user.email, user.name)}
-                                                    className="text-red-600 hover:text-red-900 inline-flex items-center gap-1"
-                                                >
-                                                    <Trash2 size={16} /> Delete
-                                                </button>
+                                                {user.role === 'student' ? (
+                                                    <>
+                                                        <button 
+                                                            onClick={() => handleView(user)}
+                                                            className="text-indigo-600 hover:text-indigo-900 mr-4 inline-flex items-center gap-1"
+                                                        >
+                                                            <Eye size={16} /> View
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => handleDelete(user.email, user.name, user.role)}
+                                                            className="text-red-600 hover:text-red-900 inline-flex items-center gap-1"
+                                                        >
+                                                            <Trash2 size={16} /> Delete
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <span className="text-gray-400 inline-flex items-center gap-1 cursor-not-allowed" title="Admin actions restricted">
+                                                        <Lock size={14} /> Protected
+                                                    </span>
+                                                )}
                                             </td>
                                         </tr>
                                     ))

@@ -1,9 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { SYLLABUS_DATA } from '../constants';
 import { Difficulty, Question, Subject } from '../types';
 import { generatePracticeQuestions } from '../services/geminiService';
-import { Loader2, CheckCircle, XCircle, Eye, EyeOff, BookOpen, Database, PlayCircle, HelpCircle } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, BookOpen, Database, Trophy, AlertCircle, RefreshCw, BarChart } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 interface QuestionBankProps {
@@ -17,10 +17,11 @@ export const QuestionBank: React.FC<QuestionBankProps> = ({ onResultUpdate }) =>
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(false);
   
-  // Interactive State
-  const [revealedSolutions, setRevealedSolutions] = useState<Record<number, boolean>>({});
+  // Quiz State
   const [userSelections, setUserSelections] = useState<Record<number, string>>({});
-  const [checkedState, setCheckedState] = useState<Record<number, boolean>>({});
+  const [quizSubmitted, setQuizSubmitted] = useState(false);
+  const [score, setScore] = useState({ correct: 0, total: 0 });
+  const topRef = useRef<HTMLDivElement>(null);
 
   const filteredTopics = SYLLABUS_DATA.filter(t => t.subject === selectedSubject);
 
@@ -28,45 +29,56 @@ export const QuestionBank: React.FC<QuestionBankProps> = ({ onResultUpdate }) =>
     if (!selectedTopic) return;
     setLoading(true);
     setQuestions([]);
-    setRevealedSolutions({});
     setUserSelections({});
-    setCheckedState({});
+    setQuizSubmitted(false);
+    setScore({ correct: 0, total: 0 });
     
-    // Updated to pass selectedSubject for better offline accuracy
     const results = await generatePracticeQuestions(selectedTopic, difficulty, selectedSubject as Subject);
     setQuestions(results);
     setLoading(false);
   };
 
   const handleSelectOption = (qIdx: number, option: string) => {
-    if (checkedState[qIdx]) return; // Prevent changing after checking
+    if (quizSubmitted) return; // Prevent changing after submission
     setUserSelections(prev => ({ ...prev, [qIdx]: option }));
   };
 
-  const handleCheckAnswer = (qIdx: number) => {
-    if (!userSelections[qIdx]) return;
-    
-    const isCorrect = userSelections[qIdx] === questions[qIdx].correctAnswer;
-    
-    setCheckedState(prev => ({ ...prev, [qIdx]: true }));
-    // Automatically reveal explanation when checked
-    setRevealedSolutions(prev => ({ ...prev, [qIdx]: true }));
-
-    // Send data to global analytics
-    if (onResultUpdate && selectedTopic) {
-        onResultUpdate(selectedTopic, isCorrect);
+  const handleSubmitQuiz = () => {
+    if (Object.keys(userSelections).length === 0) {
+        alert("Please attempt at least one question before submitting.");
+        return;
     }
+
+    let correctCount = 0;
+    questions.forEach((q, idx) => {
+        const isCorrect = userSelections[idx] === q.correctAnswer;
+        if (isCorrect) correctCount++;
+        
+        // Update global analytics for each question
+        if (onResultUpdate && selectedTopic) {
+            onResultUpdate(selectedTopic, isCorrect);
+        }
+    });
+
+    setScore({ correct: correctCount, total: questions.length });
+    setQuizSubmitted(true);
+    
+    // Scroll to top to show score
+    setTimeout(() => {
+        topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
   };
 
-  const toggleSolution = (index: number) => {
-    setRevealedSolutions(prev => ({
-      ...prev,
-      [index]: !prev[index]
-    }));
+  const getScoreColor = (percentage: number) => {
+      if (percentage >= 80) return 'text-green-600 bg-green-50 border-green-200';
+      if (percentage >= 50) return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+      return 'text-red-600 bg-red-50 border-red-200';
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="max-w-4xl mx-auto space-y-8" ref={topRef}>
+      
+      {/* Quiz Configuration Panel */}
       <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
         <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-6 text-white">
           <div className="flex items-center gap-2 mb-2">
@@ -74,13 +86,12 @@ export const QuestionBank: React.FC<QuestionBankProps> = ({ onResultUpdate }) =>
             <h2 className="text-2xl font-bold">Practice Question Bank</h2>
           </div>
           <p className="text-teal-50">
-            Access practice problems tailored to your difficulty level from our offline database.
+            Select a topic to generate a quick practice quiz.
           </p>
         </div>
 
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            {/* Subject Select */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">1. Select Subject</label>
               <select 
@@ -93,7 +104,6 @@ export const QuestionBank: React.FC<QuestionBankProps> = ({ onResultUpdate }) =>
               </select>
             </div>
 
-            {/* Topic Select */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">2. Select Topic</label>
               <select 
@@ -109,7 +119,6 @@ export const QuestionBank: React.FC<QuestionBankProps> = ({ onResultUpdate }) =>
               </select>
             </div>
 
-            {/* Difficulty Select */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">3. Difficulty</label>
               <select 
@@ -128,20 +137,52 @@ export const QuestionBank: React.FC<QuestionBankProps> = ({ onResultUpdate }) =>
             className="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-3 rounded-lg shadow transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? <Loader2 className="animate-spin" /> : <Database />}
-            Get Questions
+            {quizSubmitted ? 'Generate New Quiz' : 'Get Questions'}
           </button>
         </div>
       </div>
 
+      {/* Scorecard Summary (Visible after submit) */}
+      {quizSubmitted && (
+          <div className={`rounded-xl border p-6 flex flex-col md:flex-row items-center justify-between gap-6 animate-in fade-in slide-in-from-top-4 ${getScoreColor((score.correct / score.total) * 100)}`}>
+              <div className="flex items-center gap-4">
+                  <div className="p-3 bg-white/20 rounded-full backdrop-blur-sm">
+                      <Trophy size={32} />
+                  </div>
+                  <div>
+                      <h3 className="text-2xl font-bold">Quiz Results</h3>
+                      <p className="font-medium opacity-90">
+                          You scored {score.correct} out of {score.total}
+                      </p>
+                  </div>
+              </div>
+              <div className="flex items-center gap-6 text-center">
+                  <div>
+                      <div className="text-3xl font-bold">{Math.round((score.correct / score.total) * 100)}%</div>
+                      <div className="text-xs font-bold uppercase tracking-wider opacity-75">Accuracy</div>
+                  </div>
+                  <div className="w-px h-10 bg-current opacity-20 hidden md:block"></div>
+                  <div className="hidden md:block">
+                      <div className="text-3xl font-bold">{score.total - Object.keys(userSelections).length}</div>
+                      <div className="text-xs font-bold uppercase tracking-wider opacity-75">Skipped</div>
+                  </div>
+              </div>
+          </div>
+      )}
+
       {/* Questions List */}
       <div className="space-y-6">
         {questions.map((q, idx) => {
-          const isChecked = checkedState[idx];
           const userSelected = userSelections[idx];
           const isCorrect = userSelected === q.correctAnswer;
+          const isSkipped = !userSelected;
 
           return (
-            <div key={idx} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 animate-in fade-in slide-in-from-bottom-2">
+            <div key={idx} className={`bg-white rounded-lg shadow-sm border p-6 transition-all ${
+                quizSubmitted 
+                    ? (isCorrect ? 'border-green-200 bg-green-50/10' : isSkipped ? 'border-gray-200' : 'border-red-200 bg-red-50/10') 
+                    : 'border-gray-200'
+            }`}>
               <div className="flex justify-between items-start mb-4">
                 <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-bold uppercase">
                   Q{idx + 1}
@@ -151,7 +192,7 @@ export const QuestionBank: React.FC<QuestionBankProps> = ({ onResultUpdate }) =>
                   q.difficulty.includes('Medium') ? 'bg-yellow-100 text-yellow-700' :
                   'bg-red-100 text-red-700'
                 }`}>
-                  {difficulty}
+                  {difficulty.split(' ')[0]}
                 </span>
               </div>
               
@@ -164,17 +205,17 @@ export const QuestionBank: React.FC<QuestionBankProps> = ({ onResultUpdate }) =>
                   
                   let itemClass = "p-4 border rounded-lg flex items-center gap-3 transition-all relative ";
                   
-                  if (isChecked) {
+                  if (quizSubmitted) {
                      if (isThisCorrect) {
-                        itemClass += "bg-green-50 border-green-500 ring-1 ring-green-500 text-green-900";
+                        itemClass += "bg-green-100 border-green-500 ring-1 ring-green-500 text-green-900";
                      } else if (isThisSelected) {
-                        itemClass += "bg-red-50 border-red-500 ring-1 ring-red-500 text-red-900";
+                        itemClass += "bg-red-100 border-red-500 ring-1 ring-red-500 text-red-900";
                      } else {
-                        itemClass += "bg-gray-50 opacity-60";
+                        itemClass += "bg-white opacity-60 border-gray-200";
                      }
                   } else {
                      if (isThisSelected) {
-                        itemClass += "bg-teal-50 border-teal-500 ring-1 ring-teal-500 cursor-pointer";
+                        itemClass += "bg-teal-50 border-teal-500 ring-1 ring-teal-500 cursor-pointer shadow-sm";
                      } else {
                         itemClass += "hover:bg-gray-50 cursor-pointer border-gray-200";
                      }
@@ -187,8 +228,8 @@ export const QuestionBank: React.FC<QuestionBankProps> = ({ onResultUpdate }) =>
                       className={itemClass}
                     >
                       <div className={`w-6 h-6 flex-shrink-0 flex items-center justify-center rounded-full text-xs font-bold border ${
-                         isChecked && isThisCorrect ? 'bg-green-200 border-green-300 text-green-800' :
-                         isChecked && isThisSelected && !isThisCorrect ? 'bg-red-200 border-red-300 text-red-800' :
+                         quizSubmitted && isThisCorrect ? 'bg-green-600 text-white border-green-600' :
+                         quizSubmitted && isThisSelected ? 'bg-red-600 text-white border-red-600' :
                          isThisSelected ? 'bg-teal-600 text-white border-teal-600' : 
                          'bg-gray-100 text-gray-500 border-gray-300'
                       }`}>
@@ -196,57 +237,22 @@ export const QuestionBank: React.FC<QuestionBankProps> = ({ onResultUpdate }) =>
                       </div>
                       <span className="font-medium">{opt}</span>
                       
-                      {isChecked && isThisCorrect && <CheckCircle className="absolute right-4 text-green-600" size={20} />}
-                      {isChecked && isThisSelected && !isThisCorrect && <XCircle className="absolute right-4 text-red-500" size={20} />}
+                      {quizSubmitted && isThisCorrect && <CheckCircle className="absolute right-4 text-green-600" size={20} />}
+                      {quizSubmitted && isThisSelected && !isThisCorrect && <XCircle className="absolute right-4 text-red-500" size={20} />}
                     </div>
                   );
                 })}
               </div>
 
-              <div className="border-t pt-4 flex flex-wrap items-center gap-4">
-                <button
-                   onClick={() => handleCheckAnswer(idx)}
-                   disabled={isChecked || !userSelected}
-                   className={`px-4 py-2 rounded-lg font-semibold text-sm flex items-center gap-2 shadow-sm transition-all ${
-                     isChecked 
-                       ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                       : userSelected 
-                         ? 'bg-teal-600 text-white hover:bg-teal-700'
-                         : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                   }`}
-                >
-                   <PlayCircle size={16} /> Check Answer
-                </button>
-
-                <div className="h-6 w-px bg-gray-200 mx-2 hidden sm:block"></div>
-
-                <button 
-                  onClick={() => toggleSolution(idx)}
-                  className="text-gray-500 font-medium text-sm flex items-center gap-2 hover:text-teal-600 transition-colors"
-                >
-                  {revealedSolutions[idx] ? <EyeOff size={16} /> : <Eye size={16} />}
-                  {revealedSolutions[idx] ? 'Hide Solution' : 'Show Solution'}
-                </button>
-              </div>
-
-              {revealedSolutions[idx] && (
-                <div className="mt-4 bg-teal-50 p-5 rounded-lg border border-teal-100 animate-in fade-in slide-in-from-top-1">
-                  <div className={`flex items-center gap-2 font-bold mb-3 ${isChecked && isCorrect ? 'text-green-700' : 'text-teal-800'}`}>
-                    {isChecked ? (
-                       isCorrect ? <><CheckCircle size={18} /> Correct!</> : <><XCircle size={18} /> Incorrect</>
-                    ) : (
-                       <><HelpCircle size={18} /> Solution</>
-                    )}
+              {/* Solution Section (Revealed after submit) */}
+              {quizSubmitted && (
+                <div className="mt-4 bg-white p-5 rounded-lg border border-gray-200 animate-in fade-in slide-in-from-top-1">
+                  <div className="flex items-center gap-2 font-bold mb-3 text-gray-800">
+                    <BookOpen size={18} className="text-teal-600" /> 
+                    <span>Explanation</span>
                   </div>
                   
-                  {!isChecked && (
-                     <div className="mb-2 text-sm font-semibold text-gray-700">
-                        Correct Answer: {q.correctAnswer}
-                     </div>
-                  )}
-
-                  <div className="text-gray-700 text-sm leading-relaxed bg-white p-3 rounded border border-teal-100/50">
-                    <strong className="block mb-1 text-teal-900">Explanation:</strong>
+                  <div className="text-gray-700 text-sm leading-relaxed">
                     <ReactMarkdown>{q.explanation}</ReactMarkdown>
                   </div>
                 </div>
@@ -254,6 +260,19 @@ export const QuestionBank: React.FC<QuestionBankProps> = ({ onResultUpdate }) =>
             </div>
           );
         })}
+
+        {/* Action Buttons */}
+        {questions.length > 0 && !quizSubmitted && (
+            <div className="flex justify-center pt-6 pb-12">
+                <button
+                    onClick={handleSubmitQuiz}
+                    className="bg-gray-900 hover:bg-black text-white text-lg font-bold py-4 px-12 rounded-full shadow-lg hover:shadow-xl transition-all flex items-center gap-3 transform hover:-translate-y-1"
+                >
+                    <BarChart size={24} /> Submit Quiz & View Analytics
+                </button>
+            </div>
+        )}
+
         {questions.length === 0 && !loading && selectedTopic && (
           <div className="text-center text-gray-500 py-12 bg-gray-50 rounded-lg border border-dashed border-gray-300">
             <Database className="w-12 h-12 mx-auto text-gray-300 mb-3" />

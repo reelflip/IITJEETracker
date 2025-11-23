@@ -22,7 +22,7 @@ const seedAdmin = () => {
             name: 'Admin',
             email: 'vikas.00@gmail.com',
             coachingInstitute: 'Head Office',
-            targetYear: '2025',
+            targetYear: 'IIT JEE 2025',
             passwordHash: hashPassword('Ishika@123'),
             role: 'admin'
         };

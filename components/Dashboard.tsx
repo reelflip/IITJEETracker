@@ -20,7 +20,7 @@ interface DashboardProps {
   onLogout: () => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoaching = "Bakliwal Tutorials", userTargetYear = "2025", userRole = 'student', onLogout }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoaching = "Bakliwal Tutorials", userTargetYear = "IIT JEE 2025", userRole = 'student', onLogout }) => {
   // If admin, default to admin panel
   const [activeTab, setActiveTab] = useState<'syllabus' | 'analytics' | 'ai' | 'practice' | 'timetable' | 'profile' | 'admin'>(
     userRole === 'admin' ? 'admin' : 'syllabus'
