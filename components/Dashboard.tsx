@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { SYLLABUS_DATA, INITIAL_PROGRESS } from '../constants';
 import { TopicProgress, Subject, Status } from '../types';
@@ -8,15 +9,16 @@ import { TimetableGenerator } from './TimetableGenerator';
 import { LayoutDashboard, Table2, BrainCircuit, Search, Menu, X, BookCheck, LogOut, UserCircle, CalendarClock } from 'lucide-react';
 
 interface DashboardProps {
-  user: string;
+  userId: string; // Used for storage key
+  userName: string; // Used for display
   onLogout: () => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, onLogout }) => {
   const [activeTab, setActiveTab] = useState<'syllabus' | 'ai' | 'practice' | 'timetable'>('syllabus');
   const [progress, setProgress] = useState<Record<string, TopicProgress>>(() => {
-    // Load from user-specific local storage key
-    const storageKey = `bt-jee-tracker-progress-${user}`;
+    // Load from user-specific local storage key (using email/ID)
+    const storageKey = `bt-jee-tracker-progress-${userId}`;
     try {
       const saved = localStorage.getItem(storageKey);
       
@@ -61,8 +63,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
   // Persist to user-specific key
   useEffect(() => {
-    localStorage.setItem(`bt-jee-tracker-progress-${user}`, JSON.stringify(progress));
-  }, [progress, user]);
+    localStorage.setItem(`bt-jee-tracker-progress-${userId}`, JSON.stringify(progress));
+  }, [progress, userId]);
 
   const handleProgressUpdate = (id: string, updates: Partial<TopicProgress>) => {
     setProgress(prev => ({
@@ -135,7 +137,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 text-sm font-medium text-gray-700 bg-gray-100 px-3 py-1.5 rounded-full">
                   <UserCircle size={16} />
-                  {user}
+                  {userName}
                 </div>
                 <button 
                   onClick={onLogout}
@@ -149,7 +151,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
             {/* Mobile Menu Button */}
             <div className="flex items-center md:hidden gap-3">
-               <span className="text-sm font-semibold text-gray-700 bg-gray-100 px-2 py-1 rounded">{user}</span>
+               <span className="text-sm font-semibold text-gray-700 bg-gray-100 px-2 py-1 rounded">{userName}</span>
                <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="text-gray-600">
                  {mobileMenuOpen ? <X /> : <Menu />}
                </button>
@@ -222,7 +224,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
              </div>
 
              <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm md:col-span-2 flex flex-col justify-center">
-                <h3 className="text-gray-800 font-semibold mb-2">Welcome Back, {user}!</h3>
+                <h3 className="text-gray-800 font-semibold mb-2">Welcome Back, {userName}!</h3>
                 <p className="text-gray-600 text-sm">
                   Consistent effort is the key to cracking JEE. You have completed {completedTopics} out of {totalTopics} major topics. 
                   Keep pushing through your Phase tests!

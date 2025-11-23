@@ -2,28 +2,29 @@
 import React, { useState, useEffect } from 'react';
 import { LoginPage } from './components/LoginPage';
 import { Dashboard } from './components/Dashboard';
+import { authService } from './services/authService';
+import { User } from './types';
 
 function App() {
-  const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for a persisting session (optional, but good UX)
-    const lastUser = localStorage.getItem('bt-jee-tracker-last-user');
-    if (lastUser) {
-      setCurrentUser(lastUser);
+    // Check for a persisting session
+    const session = authService.getSession();
+    if (session) {
+      setCurrentUser(session);
     }
     setLoading(false);
   }, []);
 
-  const handleLogin = (username: string) => {
-    setCurrentUser(username);
-    localStorage.setItem('bt-jee-tracker-last-user', username);
+  const handleLogin = (user: User) => {
+    setCurrentUser(user);
   };
 
   const handleLogout = () => {
+    authService.logout();
     setCurrentUser(null);
-    localStorage.removeItem('bt-jee-tracker-last-user');
   };
 
   if (loading) {
@@ -34,11 +35,12 @@ function App() {
     return <LoginPage onLogin={handleLogin} />;
   }
 
-  // Passing 'key' forces the Dashboard to fully remount and re-initialize state when user changes
+  // Passing key forces remount when user changes
   return (
     <Dashboard 
-      key={currentUser} 
-      user={currentUser} 
+      key={currentUser.id} 
+      userId={currentUser.email} // Use email as storage key for progress
+      userName={currentUser.name}
       onLogout={handleLogout} 
     />
   );

@@ -1,32 +1,49 @@
 
-import React, { useState, useEffect } from 'react';
-import { LogIn, GraduationCap, User, ArrowRight } from 'lucide-react';
+import React, { useState } from 'react';
+import { LogIn, GraduationCap, User as UserIcon, ArrowRight, Lock, Mail, UserPlus } from 'lucide-react';
+import { authService } from '../services/authService';
+import { User } from '../types';
 
 interface LoginPageProps {
-  onLogin: (username: string) => void;
+  onLogin: (user: User) => void;
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
-  const [inputName, setInputName] = useState('');
-  const [existingUsers, setExistingUsers] = useState<string[]>([]);
-
-  useEffect(() => {
-    const users: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key?.startsWith('bt-jee-tracker-progress-')) {
-        const username = key.replace('bt-jee-tracker-progress-', '');
-        if (username) users.push(username);
-      }
-    }
-    setExistingUsers(users.sort());
-  }, []);
+  const [isSignUp, setIsSignUp] = useState(false);
+  
+  // Form State
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (inputName.trim()) {
-      onLogin(inputName.trim());
-    }
+    setError(null);
+    setLoading(true);
+
+    // Simulate network delay
+    setTimeout(() => {
+      if (isSignUp) {
+        const result = authService.register(name, email, password);
+        if (result.success && result.user) {
+          onLogin(result.user);
+        } else {
+          setError(result.message || 'Registration failed');
+          setLoading(false);
+        }
+      } else {
+        const result = authService.login(email, password);
+        if (result.success && result.user) {
+          onLogin(result.user);
+        } else {
+          setError(result.message || 'Login failed');
+          setLoading(false);
+        }
+      }
+    }, 600);
   };
 
   return (
@@ -43,54 +60,86 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
 
         <div className="p-8">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
-                Student Name
-              </label>
+            
+            {/* Toggle Header */}
+            <div className="flex items-center justify-between mb-6">
+               <h2 className="text-xl font-bold text-gray-800">{isSignUp ? 'Create Account' : 'Welcome Back'}</h2>
+            </div>
+
+            {error && (
+              <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100 mb-4">
+                {error}
+              </div>
+            )}
+
+            {isSignUp && (
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-gray-500 uppercase">Full Name</label>
+                <div className="relative">
+                  <UserIcon className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    required={isSignUp}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="John Doe"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bt-blue focus:border-bt-blue outline-none"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-500 uppercase">Email Address</label>
               <div className="relative">
-                <User className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                <Mail className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
                 <input
-                  type="text"
-                  id="username"
+                  type="email"
                   required
-                  value={inputName}
-                  onChange={(e) => setInputName(e.target.value)}
-                  placeholder="Enter your name"
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bt-blue focus:border-bt-blue outline-none transition-all"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="student@example.com"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bt-blue focus:border-bt-blue outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-500 uppercase">Password</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bt-blue focus:border-bt-blue outline-none"
                 />
               </div>
             </div>
             
             <button
               type="submit"
-              disabled={!inputName.trim()}
-              className="w-full bg-bt-blue hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={loading}
+              className="w-full bg-bt-blue hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2 mt-4 shadow-sm"
             >
-              Start Preparing <ArrowRight size={18} />
+              {loading ? 'Processing...' : (isSignUp ? 'Sign Up' : 'Sign In')} 
+              {!loading && <ArrowRight size={18} />}
             </button>
           </form>
 
-          {existingUsers.length > 0 && (
-            <div className="mt-8 pt-6 border-t border-gray-100">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                Continue as
-              </p>
-              <div className="space-y-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
-                {existingUsers.map((user) => (
-                  <button
-                    key={user}
-                    onClick={() => onLogin(user)}
-                    className="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-50 border border-transparent hover:border-gray-200 transition-all flex items-center justify-between group"
-                  >
-                    <span className="font-medium text-gray-700 group-hover:text-gray-900">
-                      {user}
-                    </span>
-                    <LogIn size={16} className="text-gray-300 group-hover:text-bt-blue" />
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
+              {isSignUp ? "Already have an account?" : "Don't have an account?"}
+              <button 
+                onClick={() => { setIsSignUp(!isSignUp); setError(null); }}
+                className="ml-2 font-semibold text-bt-blue hover:underline focus:outline-none"
+              >
+                {isSignUp ? 'Log In' : 'Sign Up'}
+              </button>
+            </p>
+          </div>
         </div>
       </div>
     </div>

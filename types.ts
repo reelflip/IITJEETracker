@@ -18,6 +18,13 @@ export enum Difficulty {
   HARD = 'Hard (Advanced Challenger)'
 }
 
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  passwordHash: string; // Simulated hash
+}
+
 export interface Topic {
   id: string;
   name: string;
