@@ -49,6 +49,7 @@ export interface Topic {
   subject: Subject;
   phase: number; // 1-6 for a comprehensive 2-year course
   estimatedHours: number;
+  theorySummary?: string; // New field for basic theory notes
 }
 
 export interface ExerciseProgress {
