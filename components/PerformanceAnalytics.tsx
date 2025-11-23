@@ -2,11 +2,11 @@
 import React, { useMemo, useState } from 'react';
 import { SYLLABUS_DATA } from '../constants';
 import { TopicProgress, Subject, Status, ExerciseProgress, TopicPracticeStats } from '../types';
-import { BarChart3, TrendingUp, AlertTriangle, CheckCircle2, Target, BookOpen, Filter, Lightbulb, PieChart } from 'lucide-react';
+import { BarChart3, TrendingUp, AlertTriangle, CheckCircle2, Target, BookOpen, Filter, Lightbulb, PieChart, BrainCircuit, History, Trophy } from 'lucide-react';
 
 interface PerformanceAnalyticsProps {
   progress: Record<string, TopicProgress>;
-  practiceStats?: Record<string, TopicPracticeStats>; // New Prop
+  practiceStats?: Record<string, TopicPracticeStats>;
 }
 
 export const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({ progress, practiceStats = {} }) => {
@@ -21,7 +21,6 @@ export const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({ prog
         [Subject.CHEMISTRY]: { total: 0, completed: 0, score: 0, weakTopics: [] as string[] },
         [Subject.MATHS]: { total: 0, completed: 0, score: 0, weakTopics: [] as string[] },
       },
-      // Combining data for advanced insights
       holisticTopics: [] as { 
           id: string;
           name: string; 
@@ -37,7 +36,6 @@ export const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({ prog
       const p = progress[topic.id];
       const practice = practiceStats[topic.id];
 
-      // Explicitly cast to ExerciseProgress[] to ensure correct reduce type inference
       const exercises = (p?.exercises || []) as ExerciseProgress[];
       
       // 1. Textbook Score (Volume)
@@ -105,6 +103,37 @@ export const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({ prog
     return data;
   }, [progress, practiceStats]);
 
+  // --- Quiz Specific Stats ---
+  const quizStats = useMemo(() => {
+    let totalAttempts = 0;
+    let totalCorrect = 0;
+    const history: {id: string, name: string, subject: Subject, attempts: number, correct: number, accuracy: number}[] = [];
+
+    Object.keys(practiceStats).forEach(topicId => {
+        const stat = practiceStats[topicId];
+        const topic = SYLLABUS_DATA.find(t => t.id === topicId);
+        if (topic && stat.attempts > 0) {
+            totalAttempts += stat.attempts;
+            totalCorrect += stat.correct;
+            history.push({
+                id: topic.id,
+                name: topic.name,
+                subject: topic.subject,
+                attempts: stat.attempts,
+                correct: stat.correct,
+                accuracy: Math.round((stat.correct / stat.attempts) * 100)
+            });
+        }
+    });
+
+    return {
+        totalAttempts,
+        totalCorrect,
+        globalAccuracy: totalAttempts > 0 ? Math.round((totalCorrect / totalAttempts) * 100) : 0,
+        history: history.sort((a, b) => b.attempts - a.attempts) // Sort by most active
+    };
+  }, [practiceStats]);
+
   const getScoreColor = (score: number) => {
     if (score >= 75) return 'text-green-600 bg-green-100 border-green-200';
     if (score >= 40) return 'text-yellow-600 bg-yellow-100 border-yellow-200';
@@ -118,13 +147,14 @@ export const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({ prog
   };
 
   const filteredHolisticTopics = stats.holisticTopics.filter(t => selectedSubject === 'All' || t.subject === selectedSubject);
+  const filteredQuizHistory = quizStats.history.filter(t => selectedSubject === 'All' || t.subject === selectedSubject);
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
       
-      {/* Header Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm md:col-span-1">
+      {/* Header Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
            <div className="flex items-center gap-3 mb-2">
              <div className="p-2 bg-blue-100 rounded-lg text-bt-blue"><BarChart3 size={20} /></div>
              <h3 className="text-sm font-bold text-gray-500 uppercase">Syllabus Coverage</h3>
@@ -135,7 +165,7 @@ export const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({ prog
            <p className="text-xs text-gray-500 mt-1">{stats.overall.completed} of {stats.overall.total} Topics Mastered</p>
         </div>
 
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm md:col-span-1">
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
            <div className="flex items-center gap-3 mb-2">
              <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600"><Target size={20} /></div>
              <h3 className="text-sm font-bold text-gray-500 uppercase">Textbook Solving</h3>
@@ -146,62 +176,34 @@ export const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({ prog
            <p className="text-xs text-gray-500 mt-1">{stats.overall.exercisesDone} Questions Solved</p>
         </div>
 
-        {/* Combined Insight Card */}
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 rounded-xl shadow-md md:col-span-2 text-white">
-            <div className="flex justify-between items-start">
-                <div>
-                    <h3 className="text-lg font-bold flex items-center gap-2">
-                        <Lightbulb className="text-yellow-300" /> Smart Insight
-                    </h3>
-                    <p className="text-indigo-100 text-sm mt-2 leading-relaxed">
-                        We are now combining your <strong>Manual Textbook Progress</strong> with your <strong>Online Quiz Accuracy</strong>. 
-                        Check the table below to see if your practice volume matches your conceptual understanding.
-                    </p>
-                </div>
-                <div className="p-3 bg-white/10 rounded-lg backdrop-blur-sm">
-                    <PieChart size={32} className="text-white" />
-                </div>
-            </div>
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+           <div className="flex items-center gap-3 mb-2">
+             <div className="p-2 bg-purple-100 rounded-lg text-purple-600"><BrainCircuit size={20} /></div>
+             <h3 className="text-sm font-bold text-gray-500 uppercase">Online Quiz Accuracy</h3>
+           </div>
+           <p className="text-3xl font-bold text-gray-900">
+             {quizStats.globalAccuracy}%
+           </p>
+           <p className="text-xs text-gray-500 mt-1">{quizStats.totalCorrect} Correct out of {quizStats.totalAttempts} Attempted</p>
         </div>
       </div>
 
-      {/* Subject Proficiency Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {Object.values(Subject).map(subject => {
-            const subjStats = stats.subjects[subject];
-            const isSelected = selectedSubject === subject;
-            return (
-                <div 
-                    key={subject} 
-                    onClick={() => setSelectedSubject(isSelected ? 'All' : subject)}
-                    className={`bg-white rounded-xl border p-5 shadow-sm cursor-pointer transition-all duration-200 ${
-                        isSelected ? 'border-bt-blue ring-2 ring-bt-blue/20 transform scale-[1.02]' : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                >
-                    <div className="flex justify-between items-center mb-4">
-                        <h3 className={`font-bold ${isSelected ? 'text-bt-blue' : 'text-gray-800'}`}>{subject}</h3>
-                        <span className={`px-2 py-1 rounded text-xs font-bold ${getScoreColor(subjStats.score)}`}>
-                            {subjStats.score}% Volume
-                        </span>
-                    </div>
-                    
-                    <div className="space-y-4">
-                        <div>
-                            <div className="flex justify-between text-xs text-gray-500 mb-1">
-                                <span>Topic Completion</span>
-                                <span>{subjStats.completed}/{subjStats.total}</span>
-                            </div>
-                            <div className="w-full bg-gray-100 rounded-full h-1.5">
-                                <div 
-                                    className="bg-gray-800 h-1.5 rounded-full" 
-                                    style={{ width: `${subjStats.total > 0 ? (subjStats.completed/subjStats.total)*100 : 0}%` }}
-                                ></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            );
-        })}
+      {/* Combined Insight Banner */}
+      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 rounded-xl shadow-md text-white">
+          <div className="flex justify-between items-start">
+              <div>
+                  <h3 className="text-lg font-bold flex items-center gap-2">
+                      <Lightbulb className="text-yellow-300" /> Smart Insight
+                  </h3>
+                  <p className="text-indigo-100 text-sm mt-2 leading-relaxed">
+                      We are combining your <strong>Manual Textbook Progress</strong> with your <strong>Online Quiz Accuracy</strong> to provide better recommendations. 
+                      Check the table below to see if your practice volume matches your conceptual understanding.
+                  </p>
+              </div>
+              <div className="p-3 bg-white/10 rounded-lg backdrop-blur-sm">
+                  <PieChart size={32} className="text-white" />
+              </div>
+          </div>
       </div>
 
       {/* Filter Bar */}
@@ -210,12 +212,12 @@ export const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({ prog
               <Filter className="text-gray-500 w-5 h-5" />
               <span className="text-sm font-medium text-gray-700">Filter Analysis:</span>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 overflow-x-auto">
             {(['All', Subject.PHYSICS, Subject.CHEMISTRY, Subject.MATHS] as const).map(subj => (
               <button
                 key={subj}
                 onClick={() => setSelectedSubject(subj)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
                   selectedSubject === subj 
                   ? 'bg-gray-900 text-white' 
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -227,15 +229,71 @@ export const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({ prog
           </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-8">
+      <div className="space-y-8">
           
-          {/* Detailed Holistic Breakdown */}
+          {/* Section 1: Practice History (New) */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="bg-purple-50 p-4 border-b border-gray-200 flex justify-between items-center">
+                  <h3 className="font-bold text-purple-900 flex items-center gap-2">
+                      <History size={18} /> Practice History (Online Quizzes)
+                  </h3>
+              </div>
+              
+              {filteredQuizHistory.length === 0 ? (
+                  <div className="p-8 text-center text-gray-500">
+                      <Trophy size={48} className="mx-auto text-gray-300 mb-3" />
+                      <p>No practice quizzes attempted yet for this subject.</p>
+                      <p className="text-xs mt-1">Go to the "Practice" tab to take your first quiz!</p>
+                  </div>
+              ) : (
+                  <div className="overflow-x-auto max-h-[300px]">
+                      <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50 sticky top-0">
+                              <tr>
+                                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Topic</th>
+                                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Subject</th>
+                                  <th className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Questions</th>
+                                  <th className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Accuracy</th>
+                                  <th className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Performance</th>
+                              </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                              {filteredQuizHistory.map((item) => (
+                                  <tr key={item.id} className="hover:bg-gray-50">
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.name}</td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.subject}</td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-700">{item.attempts}</td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                              item.accuracy >= 75 ? 'bg-green-100 text-green-800' : 
+                                              item.accuracy >= 50 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                                          }`}>
+                                              {item.accuracy}%
+                                          </span>
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                                          <div className="w-full bg-gray-200 rounded-full h-1.5 max-w-[100px] mx-auto">
+                                              <div 
+                                                  className={`h-1.5 rounded-full ${getProgressBarColor(item.accuracy)}`} 
+                                                  style={{ width: `${item.accuracy}%` }}
+                                              ></div>
+                                          </div>
+                                      </td>
+                                  </tr>
+                              ))}
+                          </tbody>
+                      </table>
+                  </div>
+              )}
+          </div>
+
+          {/* Section 2: Holistic Breakdown */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
               <div className="bg-gray-50 p-4 border-b border-gray-200 flex justify-between items-center">
                   <h3 className="font-bold text-gray-800 flex items-center gap-2">
                       <BookOpen size={18} /> Holistic Performance Review
                   </h3>
-                  <span className="text-xs text-gray-500 hidden sm:inline">Combines Textbook Data (User Input) + Quiz Data (Online)</span>
+                  <span className="text-xs text-gray-500 hidden sm:inline">Combines Textbook Data + Quiz Data</span>
               </div>
               <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
