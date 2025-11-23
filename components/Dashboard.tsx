@@ -9,7 +9,8 @@ import { TimetableGenerator } from './TimetableGenerator';
 import { ProfilePage } from './ProfilePage';
 import { AdminPanel } from './AdminPanel';
 import { PerformanceAnalytics } from './PerformanceAnalytics'; 
-import { LayoutDashboard, Table2, BrainCircuit, Search, Menu, X, BookCheck, LogOut, UserCircle, CalendarClock, ShieldCheck, BarChart2 } from 'lucide-react';
+import { MockExamInterface } from './MockExamInterface'; // Import New Component
+import { LayoutDashboard, Table2, BrainCircuit, Search, Menu, X, BookCheck, LogOut, UserCircle, CalendarClock, ShieldCheck, BarChart2, FileText } from 'lucide-react';
 
 interface DashboardProps {
   userId: string; 
@@ -22,7 +23,7 @@ interface DashboardProps {
 
 export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoaching = "Bakliwal Tutorials", userTargetYear = "IIT JEE 2025", userRole = 'student', onLogout }) => {
   // If admin, default to admin panel
-  const [activeTab, setActiveTab] = useState<'syllabus' | 'analytics' | 'ai' | 'practice' | 'timetable' | 'profile' | 'admin'>(
+  const [activeTab, setActiveTab] = useState<'syllabus' | 'analytics' | 'ai' | 'practice' | 'exams' | 'timetable' | 'profile' | 'admin'>(
     userRole === 'admin' ? 'admin' : 'syllabus'
   );
 
@@ -153,7 +154,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
             </div>
 
             {/* Desktop Nav */}
-            <div className="hidden md:flex items-center space-x-4 lg:space-x-6">
+            <div className="hidden md:flex items-center space-x-1 lg:space-x-4">
               
               {userRole === 'admin' ? (
                  <button 
@@ -187,11 +188,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
                     Practice
                   </button>
                   <button 
+                    onClick={() => setActiveTab('exams')}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${activeTab === 'exams' ? 'bg-red-50 text-red-700 font-medium' : 'text-gray-600 hover:text-gray-900'}`}
+                  >
+                    <FileText size={18} />
+                    Mock Exams
+                  </button>
+                  <button 
                     onClick={() => setActiveTab('ai')}
                     className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${activeTab === 'ai' ? 'bg-purple-50 text-purple-700 font-medium' : 'text-gray-600 hover:text-gray-900'}`}
                   >
                     <BrainCircuit size={18} />
-                    Smart Planner
+                    Planner
                   </button>
                   <button 
                     onClick={() => setActiveTab('timetable')}
@@ -264,6 +272,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
                     className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900"
                   >
                     Practice Bank
+                  </button>
+                  <button 
+                    onClick={() => { setActiveTab('exams'); setMobileMenuOpen(false); }}
+                    className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                  >
+                    Mock Exams
                   </button>
                   <button 
                     onClick={() => { setActiveTab('timetable'); setMobileMenuOpen(false); }}
@@ -396,6 +410,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
           <PerformanceAnalytics progress={progress} practiceStats={practiceStats} />
         ) : activeTab === 'practice' ? (
           <QuestionBank onResultUpdate={handlePracticeUpdate} />
+        ) : activeTab === 'exams' ? (
+          <MockExamInterface />
         ) : activeTab === 'ai' ? (
           <AIPlanner />
         ) : activeTab === 'timetable' ? (

@@ -26,7 +26,6 @@ export interface User {
   targetYear?: string;
   passwordHash: string; 
   role: 'admin' | 'student';
-  // New fields for recovery
   securityQuestion?: string;
   securityAnswer?: string;
 }
@@ -51,7 +50,7 @@ export const SECURITY_QUESTIONS = [
   "What is the name of your first pet?",
   "What is your mother's maiden name?",
   "What city were you born in?",
-  "What is your favorite food?",
+  "What is the favorite food?",
   "What is the name of your elementary school?",
   "Who is your favorite superhero?"
 ];
@@ -91,11 +90,13 @@ export interface PlanRequest {
 }
 
 export interface Question {
+  id?: string;
   questionText: string;
   options: string[];
   correctAnswer: string;
   explanation: string;
   difficulty: string;
+  subject?: Subject; // Optional for generic use, required for exams
 }
 
 export interface TimetableConstraints {
@@ -116,4 +117,38 @@ export interface WeeklySchedule {
   summary: string;
   schedule: DailySchedule[];
   guidelines: string[];
+}
+
+// --- EXAM SIMULATOR TYPES ---
+
+export interface ExamPaper {
+  id: string;
+  title: string;
+  year: string;
+  type: 'Mains' | 'Advanced';
+  durationMinutes: number;
+  totalMarks: number;
+  sections: {
+    subject: Subject;
+    questions: Question[];
+  }[];
+}
+
+export enum QuestionPaletteStatus {
+  NOT_VISITED = 'not_visited',
+  NOT_ANSWERED = 'not_answered',
+  ANSWERED = 'answered',
+  MARKED_FOR_REVIEW = 'marked',
+  ANSWERED_AND_MARKED = 'answered_marked'
+}
+
+export interface ExamResult {
+  examId: string;
+  score: number;
+  totalQuestions: number;
+  attempted: number;
+  correct: number;
+  wrong: number;
+  accuracy: number;
+  timeTaken: string;
 }
