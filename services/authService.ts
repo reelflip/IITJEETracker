@@ -17,7 +17,7 @@ export const authService = {
     }
   },
 
-  register: (name: string, email: string, password: string): { success: boolean; message?: string; user?: User } => {
+  register: (name: string, email: string, password: string, coaching: string): { success: boolean; message?: string; user?: User } => {
     const users = authService.getUsers();
     
     if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
@@ -28,6 +28,7 @@ export const authService = {
       id: crypto.randomUUID(),
       name,
       email: email.toLowerCase(),
+      coachingInstitute: coaching,
       passwordHash: hashPassword(password)
     };
 

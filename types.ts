@@ -22,8 +22,25 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  coachingInstitute?: string; // New field
   passwordHash: string; // Simulated hash
 }
+
+export const COACHING_INSTITUTES = [
+  "Bakliwal Tutorials",
+  "Allen Career Institute",
+  "Aakash Institute",
+  "FIITJEE",
+  "Resonance",
+  "Sri Chaitanya",
+  "Narayana",
+  "Physics Wallah (Vidyapeeth)",
+  "Unacademy (Offline/Online)",
+  "Motion Education",
+  "Reliable Institute",
+  "Vibrant Academy",
+  "Self Study / Other"
+];
 
 export interface Topic {
   id: string;

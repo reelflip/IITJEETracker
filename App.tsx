@@ -41,6 +41,7 @@ function App() {
       key={currentUser.id} 
       userId={currentUser.email} // Use email as storage key for progress
       userName={currentUser.name}
+      userCoaching={currentUser.coachingInstitute}
       onLogout={handleLogout} 
     />
   );

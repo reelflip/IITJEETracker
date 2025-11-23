@@ -11,10 +11,11 @@ import { LayoutDashboard, Table2, BrainCircuit, Search, Menu, X, BookCheck, LogO
 interface DashboardProps {
   userId: string; // Used for storage key
   userName: string; // Used for display
+  userCoaching?: string;
   onLogout: () => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, onLogout }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoaching = "Bakliwal Tutorials", onLogout }) => {
   const [activeTab, setActiveTab] = useState<'syllabus' | 'ai' | 'practice' | 'timetable'>('syllabus');
   const [progress, setProgress] = useState<Record<string, TopicProgress>>(() => {
     // Load from user-specific local storage key (using email/ID)
@@ -61,6 +62,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, onLogout
   const completedTopics = progressValues.filter((p) => p.status === Status.COMPLETED || p.status === Status.REVISED).length;
   const completionPercentage = Math.round((completedTopics / totalTopics) * 100);
 
+  // Derive Initials for Logo
+  const coachingInitials = userCoaching
+    .split(' ')
+    .map(word => word[0])
+    .join('')
+    .substring(0, 2)
+    .toUpperCase();
+
   // Persist to user-specific key
   useEffect(() => {
     localStorage.setItem(`bt-jee-tracker-progress-${userId}`, JSON.stringify(progress));
@@ -93,12 +102,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, onLogout
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-bt-blue rounded-lg flex items-center justify-center text-white font-bold">
-                BT
+              <div className="w-9 h-9 bg-bt-blue rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-md">
+                {coachingInitials}
               </div>
-              <span className="text-xl font-bold text-gray-900 tracking-tight hidden sm:block">
-                JEE PrepTracker
-              </span>
+              <div className="flex flex-col justify-center">
+                <span className="text-lg font-bold text-gray-900 tracking-tight leading-none hidden sm:block">
+                  JEE PrepTracker
+                </span>
+                <span className="text-[10px] text-gray-500 font-medium uppercase tracking-wider hidden sm:block">
+                  {userCoaching} Edition
+                </span>
+              </div>
             </div>
 
             {/* Desktop Nav */}
@@ -226,7 +240,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, onLogout
              <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm md:col-span-2 flex flex-col justify-center">
                 <h3 className="text-gray-800 font-semibold mb-2">Welcome Back, {userName}!</h3>
                 <p className="text-gray-600 text-sm">
-                  Consistent effort is the key to cracking JEE. You have completed {completedTopics} out of {totalTopics} major topics. 
+                  Consistent effort is the key to cracking JEE with <strong>{userCoaching}</strong>. You have completed {completedTopics} out of {totalTopics} major topics. 
                   Keep pushing through your Phase tests!
                 </p>
              </div>
@@ -317,7 +331,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, onLogout
 
       <footer className="bg-white border-t border-gray-200 py-6 mt-8">
         <div className="max-w-7xl mx-auto px-4 text-center text-gray-500 text-sm">
-          <p>© {new Date().getFullYear()} JEE PrepTracker. Not officially affiliated with Bakliwal Tutorials.</p>
+          <p>© {new Date().getFullYear()} JEE PrepTracker. Tailored for {userCoaching}.</p>
         </div>
       </footer>
     </div>
