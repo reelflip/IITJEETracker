@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { LogIn, GraduationCap, User as UserIcon, ArrowRight, Lock, Mail, Building2 } from 'lucide-react';
+import { LogIn, GraduationCap, User as UserIcon, ArrowRight, Lock, Mail, Building2, Calendar } from 'lucide-react';
 import { authService } from '../services/authService';
 import { User, COACHING_INSTITUTES } from '../types';
 
@@ -16,9 +16,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [coaching, setCoaching] = useState(COACHING_INSTITUTES[0]);
+  const [targetYear, setTargetYear] = useState(new Date().getFullYear().toString());
   
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Generate next 4 years for dropdown
+  const currentYear = new Date().getFullYear();
+  const years = [currentYear, currentYear + 1, currentYear + 2, currentYear + 3].map(String);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +33,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     // Simulate network delay
     setTimeout(() => {
       if (isSignUp) {
-        const result = authService.register(name, email, password, coaching);
+        const result = authService.register(name, email, password, coaching, targetYear);
         if (result.success && result.user) {
           onLogin(result.user);
         } else {
@@ -90,19 +95,36 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-gray-500 uppercase">Coaching Institute</label>
-                  <div className="relative">
-                    <Building2 className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
-                    <select
-                      value={coaching}
-                      onChange={(e) => setCoaching(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bt-blue focus:border-bt-blue outline-none bg-white appearance-none"
-                    >
-                      {COACHING_INSTITUTES.map((inst) => (
-                        <option key={inst} value={inst}>{inst}</option>
-                      ))}
-                    </select>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-gray-500 uppercase">Institute</label>
+                    <div className="relative">
+                      <Building2 className="absolute left-2 top-2.5 w-4 h-4 text-gray-400" />
+                      <select
+                        value={coaching}
+                        onChange={(e) => setCoaching(e.target.value)}
+                        className="w-full pl-8 pr-2 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-bt-blue focus:border-bt-blue outline-none bg-white appearance-none text-ellipsis overflow-hidden"
+                      >
+                        {COACHING_INSTITUTES.map((inst) => (
+                          <option key={inst} value={inst}>{inst.split(' ')[0]}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-gray-500 uppercase">Target Year</label>
+                    <div className="relative">
+                      <Calendar className="absolute left-2 top-2.5 w-4 h-4 text-gray-400" />
+                      <select
+                        value={targetYear}
+                        onChange={(e) => setTargetYear(e.target.value)}
+                        className="w-full pl-8 pr-2 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-bt-blue focus:border-bt-blue outline-none bg-white appearance-none"
+                      >
+                        {years.map((y) => (
+                          <option key={y} value={y}>{y}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 </div>
               </>
@@ -161,7 +183,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           </div>
 
           <div className="mt-8 text-center border-t pt-4">
-             <p className="text-xs text-gray-400">Admin Demo: admin@prep.com / admin123</p>
+             <p className="text-xs text-gray-400">Admin Demo: vikas.00@gmail.com / Ishika@123</p>
           </div>
         </div>
       </div>

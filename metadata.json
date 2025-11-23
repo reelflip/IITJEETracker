@@ -1,5 +1,5 @@
 {
-  "name": "BT JEE PrepTracker",
-  "description": "A comprehensive IIT JEE preparation tracking dashboard tailored for Bakliwal Tutorials syllabus structure, featuring a smart study planner.",
+  "name": "JEE PrepTracker",
+  "description": "A comprehensive IIT JEE preparation tracking dashboard suitable for any coaching syllabus, featuring a smart study planner and analytics.",
   "requestFramePermissions": []
 }

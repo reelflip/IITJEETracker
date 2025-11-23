@@ -6,9 +6,10 @@ interface ProfilePageProps {
   name: string;
   email: string;
   coaching: string;
+  targetYear?: string;
 }
 
-export const ProfilePage: React.FC<ProfilePageProps> = ({ name, email, coaching }) => {
+export const ProfilePage: React.FC<ProfilePageProps> = ({ name, email, coaching, targetYear = "2025" }) => {
   // Derive initials
   const initials = name
     .split(' ')
@@ -89,7 +90,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ name, email, coaching 
 
                  <div className="flex items-center gap-2 mt-4 pt-4 border-t border-blue-200">
                     <GraduationCap className="text-bt-blue" size={20} />
-                    <span className="text-sm font-medium text-blue-800">Target Exam: JEE Advanced 2025/26</span>
+                    <span className="text-sm font-medium text-blue-800">Target Exam: JEE Advanced {targetYear}</span>
                  </div>
               </div>
 

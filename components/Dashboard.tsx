@@ -1,30 +1,32 @@
 
 import React, { useState, useEffect } from 'react';
 import { SYLLABUS_DATA, INITIAL_PROGRESS } from '../constants';
-import { TopicProgress, Subject, Status } from '../types';
+import { TopicProgress, Subject, Status, TopicPracticeStats } from '../types';
 import { TopicRow } from './TopicRow';
 import { AIPlanner } from './AIPlanner';
 import { QuestionBank } from './QuestionBank';
 import { TimetableGenerator } from './TimetableGenerator';
 import { ProfilePage } from './ProfilePage';
 import { AdminPanel } from './AdminPanel';
-import { PerformanceAnalytics } from './PerformanceAnalytics'; // Import
+import { PerformanceAnalytics } from './PerformanceAnalytics'; 
 import { LayoutDashboard, Table2, BrainCircuit, Search, Menu, X, BookCheck, LogOut, UserCircle, CalendarClock, ShieldCheck, BarChart2 } from 'lucide-react';
 
 interface DashboardProps {
   userId: string; 
   userName: string; 
   userCoaching?: string;
+  userTargetYear?: string;
   userRole?: 'admin' | 'student'; 
   onLogout: () => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoaching = "Bakliwal Tutorials", userRole = 'student', onLogout }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoaching = "Bakliwal Tutorials", userTargetYear = "2025", userRole = 'student', onLogout }) => {
   // If admin, default to admin panel
   const [activeTab, setActiveTab] = useState<'syllabus' | 'analytics' | 'ai' | 'practice' | 'timetable' | 'profile' | 'admin'>(
     userRole === 'admin' ? 'admin' : 'syllabus'
   );
 
+  // --- Textbook Progress State ---
   const [progress, setProgress] = useState<Record<string, TopicProgress>>(() => {
     const storageKey = `bt-jee-tracker-progress-${userId}`;
     try {
@@ -56,6 +58,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
     return INITIAL_PROGRESS;
   });
 
+  // --- Online Practice Stats State ---
+  const [practiceStats, setPracticeStats] = useState<Record<string, TopicPracticeStats>>(() => {
+    const storageKey = `bt-jee-tracker-practice-${userId}`;
+    try {
+      const saved = localStorage.getItem(storageKey);
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSubject, setFilterSubject] = useState<Subject | 'All'>('All');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -77,14 +90,33 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
     // Only save progress if student
     if (userRole === 'student') {
         localStorage.setItem(`bt-jee-tracker-progress-${userId}`, JSON.stringify(progress));
+        localStorage.setItem(`bt-jee-tracker-practice-${userId}`, JSON.stringify(practiceStats));
     }
-  }, [progress, userId, userRole]);
+  }, [progress, practiceStats, userId, userRole]);
 
   const handleProgressUpdate = (id: string, updates: Partial<TopicProgress>) => {
     setProgress(prev => ({
       ...prev,
       [id]: { ...prev[id], ...updates }
     }));
+  };
+
+  const handlePracticeUpdate = (topicName: string, isCorrect: boolean) => {
+    // Find Topic ID by Name
+    const topic = SYLLABUS_DATA.find(t => t.name === topicName);
+    if (!topic) return;
+
+    setPracticeStats(prev => {
+      const current = prev[topic.id] || { topicId: topic.id, attempts: 0, correct: 0 };
+      return {
+        ...prev,
+        [topic.id]: {
+          ...current,
+          attempts: current.attempts + 1,
+          correct: current.correct + (isCorrect ? 1 : 0)
+        }
+      };
+    });
   };
 
   const filteredTopics = SYLLABUS_DATA.filter(topic => {
@@ -361,15 +393,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
             </div>
           </div>
         ) : activeTab === 'analytics' ? (
-          <PerformanceAnalytics progress={progress} />
+          <PerformanceAnalytics progress={progress} practiceStats={practiceStats} />
         ) : activeTab === 'practice' ? (
-          <QuestionBank />
+          <QuestionBank onResultUpdate={handlePracticeUpdate} />
         ) : activeTab === 'ai' ? (
           <AIPlanner />
         ) : activeTab === 'timetable' ? (
           <TimetableGenerator />
         ) : (
-          <ProfilePage name={userName} email={userId} coaching={userCoaching} />
+          <ProfilePage name={userName} email={userId} coaching={userCoaching} targetYear={userTargetYear} />
         )}
 
       </main>

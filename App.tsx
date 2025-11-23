@@ -41,7 +41,8 @@ function App() {
       userId={currentUser.email} 
       userName={currentUser.name}
       userCoaching={currentUser.coachingInstitute}
-      userRole={currentUser.role} // Pass role
+      userTargetYear={currentUser.targetYear} // Pass target year
+      userRole={currentUser.role} 
       onLogout={handleLogout} 
     />
   );

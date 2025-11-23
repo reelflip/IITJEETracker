@@ -22,9 +22,10 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  coachingInstitute?: string; 
+  coachingInstitute?: string;
+  targetYear?: string; // Added Target Year
   passwordHash: string; 
-  role: 'admin' | 'student'; // Added Role
+  role: 'admin' | 'student'; 
 }
 
 export const COACHING_INSTITUTES = [
@@ -63,6 +64,13 @@ export interface TopicProgress {
   notes?: string;
   // Fixed 4 exercises as per requirement
   exercises: [ExerciseProgress, ExerciseProgress, ExerciseProgress, ExerciseProgress];
+}
+
+// New Interface for Online Quiz Stats
+export interface TopicPracticeStats {
+  topicId: string;
+  attempts: number;
+  correct: number;
 }
 
 export interface PlanRequest {
