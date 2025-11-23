@@ -8,19 +8,20 @@ import { QuestionBank } from './QuestionBank';
 import { TimetableGenerator } from './TimetableGenerator';
 import { ProfilePage } from './ProfilePage';
 import { AdminPanel } from './AdminPanel';
-import { LayoutDashboard, Table2, BrainCircuit, Search, Menu, X, BookCheck, LogOut, UserCircle, CalendarClock, ShieldCheck } from 'lucide-react';
+import { PerformanceAnalytics } from './PerformanceAnalytics'; // Import
+import { LayoutDashboard, Table2, BrainCircuit, Search, Menu, X, BookCheck, LogOut, UserCircle, CalendarClock, ShieldCheck, BarChart2 } from 'lucide-react';
 
 interface DashboardProps {
   userId: string; 
   userName: string; 
   userCoaching?: string;
-  userRole?: 'admin' | 'student'; // Added role
+  userRole?: 'admin' | 'student'; 
   onLogout: () => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoaching = "Bakliwal Tutorials", userRole = 'student', onLogout }) => {
   // If admin, default to admin panel
-  const [activeTab, setActiveTab] = useState<'syllabus' | 'ai' | 'practice' | 'timetable' | 'profile' | 'admin'>(
+  const [activeTab, setActiveTab] = useState<'syllabus' | 'analytics' | 'ai' | 'practice' | 'timetable' | 'profile' | 'admin'>(
     userRole === 'admin' ? 'admin' : 'syllabus'
   );
 
@@ -140,6 +141,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
                     Syllabus
                   </button>
                   <button 
+                    onClick={() => setActiveTab('analytics')}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${activeTab === 'analytics' ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-600 hover:text-gray-900'}`}
+                  >
+                    <BarChart2 size={18} />
+                    Analytics
+                  </button>
+                  <button 
                     onClick={() => setActiveTab('practice')}
                     className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${activeTab === 'practice' ? 'bg-teal-50 text-teal-700 font-medium' : 'text-gray-600 hover:text-gray-900'}`}
                   >
@@ -212,6 +220,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
                     className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900"
                   >
                     Syllabus
+                  </button>
+                  <button 
+                    onClick={() => { setActiveTab('analytics'); setMobileMenuOpen(false); }}
+                    className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                  >
+                    Analytics
                   </button>
                   <button 
                     onClick={() => { setActiveTab('practice'); setMobileMenuOpen(false); }}
@@ -346,6 +360,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
               )}
             </div>
           </div>
+        ) : activeTab === 'analytics' ? (
+          <PerformanceAnalytics progress={progress} />
         ) : activeTab === 'practice' ? (
           <QuestionBank />
         ) : activeTab === 'ai' ? (
