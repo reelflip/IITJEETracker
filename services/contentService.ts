@@ -100,10 +100,31 @@ Backlogs are normal. They don't define your rank; how you handle them does. Prio
             id: 'b2',
             title: 'Sleep: The Underrated Rank Booster',
             excerpt: 'Why pulling all-nighters might be destroying your rank. The science of memory consolidation and why 7 hours is non-negotiable.',
-            content: `## The Myth of the "Hustle"\n\nWe see it all the time. "I studied 16 hours yesterday!" usually means "I stared at a book for 16 hours while half-asleep."\n\n### Memory Consolidation\n\nYour brain moves information from short-term to long-term memory *while you sleep*. If you study complex Organic Chemistry mechanisms and then sleep 4 hours, you literally wipe out 50% of that effort.\n\n### The Golden Routine\n\n1. **Fixed Wake-up Time**: Even on Sundays.\n2. **No Screens 1hr before bed**: Blue light kills melatonin.\n3. **Nap Strategically**: 20 mins in the afternoon is a reset button. 2 hours is a groggy disaster.`,
+            content: `## The Myth of the "Hustle"
+We see it all the time. "I studied 16 hours yesterday!" usually means "I stared at a book for 16 hours while half-asleep." Quality always beats quantity.
+
+### The Science: Why Your Brain Needs Sleep for JEE
+JEE isn't a memorization exam; it's an application exam.
+1.  **Deep Sleep (Physical Restoration):** Repairs the body and refreshes focus.
+2.  **REM Sleep (Mental Restoration):** This is where the magic happens. Your brain connects unrelated ideas and moves data from short-term to long-term memory. That "click" moment you get while solving a tricky Rotational Motion problem? That often happens because of REM sleep processing.
+
+If you cut sleep to 5 hours, you aren't just losing 2 hours of rest; you are cutting off the **most critical REM cycles** that happen in the early morning. You are literally deleting the memory of what you studied yesterday.
+
+### The Caffeine Trap ☕
+Coffee blocks adenosine receptors (the chemical that makes you tired), but it doesn't remove the fatigue. Once the caffeine wears off, all that built-up adenosine hits you at once (the crash).
+*   **Rule:** No coffee after 2 PM. It has a half-life of ~6 hours and destroys sleep quality.
+
+### The Golden Routine for Aspirants 🌙
+1.  **Fixed Wake-up Time:** Your body loves rhythm. Waking up at 6 AM one day and 9 AM the next creates "Social Jetlag," making you groggy.
+2.  **The "Worry Dump":** Can't sleep because you're thinking about Backlogs? Write them down 1 hour before bed. Tell your brain: "It's on paper, we'll handle it tomorrow."
+3.  **No Screens 1hr before bed:** Blue light kills melatonin (sleep hormone). Read a physical novel or Organic Chemistry NCERT instead (it puts anyone to sleep!).
+4.  **Nap Strategically:** 20 mins (Power Nap) is a reset button. 90 mins (Full Cycle) is okay. Anything in between (e.g., 1 hour) leaves you with "Sleep Inertia" (groggy state).
+
+### Summary
+Sleep is not a waste of time; it is a **study state**. You are strengthening neural pathways while you dream. Respect the pillow to respect the rank.`,
             author: 'Admin',
             date: new Date(Date.now() - 86400000 * 2).toISOString().split('T')[0],
-            readTime: '3 min read',
+            readTime: '5 min read',
             category: 'Mental Health',
             imageUrl: 'https://images.unsplash.com/photo-1541781777621-afb1b3a41175?auto=format&fit=crop&w=800&q=80'
         }
