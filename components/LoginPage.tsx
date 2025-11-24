@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { LogIn, User as UserIcon, ArrowRight, Lock, Mail, Building2, Calendar, KeyRound, HelpCircle, Info, BookOpen } from 'lucide-react';
+import { LogIn, User as UserIcon, ArrowRight, Lock, Mail, Building2, Calendar, KeyRound, HelpCircle, Info, BookOpen, MessageCircle } from 'lucide-react';
 import { authService } from '../services/authService';
 import { User, COACHING_INSTITUTES, SECURITY_QUESTIONS } from '../types';
 import { Logo } from './Logo';
@@ -9,9 +8,10 @@ interface LoginPageProps {
   onLogin: (user: User) => void;
   onAboutClick: () => void;
   onBlogsClick: () => void;
+  onContactClick: () => void;
 }
 
-export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onAboutClick, onBlogsClick }) => {
+export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onAboutClick, onBlogsClick, onContactClick }) => {
   const [view, setView] = useState<'login' | 'signup' | 'forgot'>('login');
   
   // Generate next 4 years for dropdown
@@ -399,6 +399,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onAboutClick, onB
                 className="text-xs font-bold text-gray-600 hover:text-bt-blue flex items-center gap-1.5 transition-colors"
              >
                 <BookOpen size={14} /> Insights Blog
+             </button>
+             <div className="w-px h-4 bg-gray-300"></div>
+             <button 
+                onClick={onContactClick}
+                className="text-xs font-bold text-gray-600 hover:text-bt-blue flex items-center gap-1.5 transition-colors"
+             >
+                <MessageCircle size={14} /> Contact Support
              </button>
           </div>
         </div>
