@@ -1,14 +1,14 @@
 
 import React, { useState } from 'react';
 import { Topic, TopicProgress, Status, Subject, ExerciseProgress } from '../types';
-import { ChevronDown, ChevronUp, CheckCircle, Circle, BookOpen, PenTool, Lock } from 'lucide-react';
+import { ChevronDown, ChevronUp, CheckCircle, Circle, BookOpen, PenTool, Lock, StickyNote, Save } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 interface TopicRowProps {
   topic: Topic;
   progress: TopicProgress;
   onUpdate: (id: string, updates: Partial<TopicProgress>) => void;
-  readOnly?: boolean; // New Prop
+  readOnly?: boolean;
 }
 
 const statusColors = {
@@ -26,15 +26,19 @@ const subjectColors = {
 
 export const TopicRow: React.FC<TopicRowProps> = ({ topic, progress, onUpdate, readOnly = false }) => {
   const [expanded, setExpanded] = useState(false);
-  const [activeTab, setActiveTab] = useState<'exercises' | 'theory'>('exercises');
+  const [activeTab, setActiveTab] = useState<'exercises' | 'theory' | 'notes'>('exercises');
+  
+  // Local state for notes to avoid excessive re-renders on every keystroke
+  const [noteContent, setNoteContent] = useState(progress.notes || '');
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
-  // Fallback if exercises array is malformed (e.g. from old local storage)
+  // Fallback if exercises array is malformed
   const safeExercises = progress.exercises?.length === 4 
     ? progress.exercises 
     : [
         { completed: 0, total: 60 }, 
-        { completed: 0, total: 50 },
-        { completed: 0, total: 40 },
+        { completed: 0, total: 50 }, 
+        { completed: 0, total: 40 }, 
         { completed: 0, total: 20 }
       ];
 
@@ -46,7 +50,6 @@ export const TopicRow: React.FC<TopicRowProps> = ({ topic, progress, onUpdate, r
     if (readOnly) return;
     const newExercises = [...safeExercises] as [ExerciseProgress, ExerciseProgress, ExerciseProgress, ExerciseProgress];
     
-    // Validate inputs
     let cleanValue = Math.max(0, value);
     if (field === 'completed' && cleanValue > newExercises[index].total) {
       cleanValue = newExercises[index].total;
@@ -58,6 +61,16 @@ export const TopicRow: React.FC<TopicRowProps> = ({ topic, progress, onUpdate, r
     };
 
     onUpdate(topic.id, { exercises: newExercises });
+  };
+
+  const handleSaveNotes = () => {
+      if (readOnly) return;
+      setSaveStatus('saving');
+      onUpdate(topic.id, { notes: noteContent });
+      setTimeout(() => {
+          setSaveStatus('saved');
+          setTimeout(() => setSaveStatus('idle'), 2000);
+      }, 500);
   };
 
   return (
@@ -135,6 +148,16 @@ export const TopicRow: React.FC<TopicRowProps> = ({ topic, progress, onUpdate, r
               >
                  <BookOpen size={16} /> Quick Theory
               </button>
+              <button 
+                onClick={() => setActiveTab('notes')}
+                className={`flex-1 py-3 text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
+                  activeTab === 'notes' 
+                  ? 'bg-white text-purple-600 border-b-2 border-purple-600' 
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                 <StickyNote size={16} /> My Notes
+              </button>
            </div>
 
            {/* Tab Content */}
@@ -194,7 +217,7 @@ export const TopicRow: React.FC<TopicRowProps> = ({ topic, progress, onUpdate, r
                       ))}
                   </div>
                 </div>
-             ) : (
+             ) : activeTab === 'theory' ? (
                <div className="prose prose-sm prose-teal max-w-none bg-white p-4 rounded-lg border border-gray-200 shadow-inner">
                   {topic.theorySummary ? (
                     <>
@@ -207,6 +230,33 @@ export const TopicRow: React.FC<TopicRowProps> = ({ topic, progress, onUpdate, r
                     </div>
                   )}
                </div>
+             ) : (
+                // My Notes Tab
+                <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                        <h4 className="text-sm font-semibold text-gray-700">Personal Notes</h4>
+                        {!readOnly && (
+                            <button 
+                                onClick={handleSaveNotes} 
+                                disabled={saveStatus !== 'idle'}
+                                className={`text-xs font-bold px-3 py-1.5 rounded flex items-center gap-1 transition-all ${
+                                    saveStatus === 'saved' ? 'bg-green-100 text-green-700' : 'bg-bt-blue text-white hover:bg-blue-700'
+                                }`}
+                            >
+                                {saveStatus === 'saved' ? <CheckCircle size={12} /> : <Save size={12} />}
+                                {saveStatus === 'saved' ? 'Saved' : 'Save Notes'}
+                            </button>
+                        )}
+                    </div>
+                    <textarea 
+                        value={noteContent}
+                        onChange={(e) => setNoteContent(e.target.value)}
+                        disabled={readOnly}
+                        placeholder="Write your key takeaways, doubts, or formulas to remember here..."
+                        className="w-full h-48 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none resize-none text-sm leading-relaxed disabled:bg-gray-50 disabled:text-gray-500"
+                    />
+                    {readOnly && <p className="text-xs text-gray-400 italic text-right">Notes are read-only for parents.</p>}
+                </div>
              )}
            </div>
         </div>

@@ -61,6 +61,27 @@ export const authService = {
     }
   },
 
+  // New method for partial profile updates
+  updateProfile: (userId: string, updates: Partial<User>): { success: boolean; message?: string; user?: User } => {
+      const users = authService.getUsers();
+      const index = users.findIndex(u => u.id === userId);
+      
+      if (index === -1) return { success: false, message: "User not found" };
+
+      const updatedUser = { ...users[index], ...updates };
+      users[index] = updatedUser;
+      
+      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+      
+      // Update session if it's the current user
+      const session = authService.getSession();
+      if (session && session.id === userId) {
+          authService.setSession(updatedUser);
+      }
+
+      return { success: true, user: updatedUser };
+  },
+
   deleteUser: (email: string) => {
     const users = authService.getUsers();
     const newUsers = users.filter(u => u.email !== email);

@@ -256,7 +256,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
             <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab(userRole === 'admin' ? 'admin' : (userRole === 'parent' ? 'profile' : 'syllabus'))}>
               <Logo variant="compact" />
               <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider border-l pl-2 border-gray-300 hidden sm:block">
-                  {userRole === 'admin' ? 'Admin Console' : (userRole === 'parent' ? 'Parent View' : `${userCoaching}`)}
+                  {userRole === 'admin' ? 'Admin Console' : (userRole === 'parent' ? 'Parent View' : 'Student Dashboard')}
               </span>
             </div>
 
@@ -266,7 +266,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
               {userRole === 'admin' ? (
                  <button 
                     onClick={() => setActiveTab('admin')}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${activeTab === 'admin' ? 'bg-gray-100 text-gray-900 font-bold' : 'text-gray-600 hover:text-gray-900'}`}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 whitespace-nowrap ${activeTab === 'admin' ? 'bg-gray-900 text-white shadow-md transform scale-105' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`}
                  >
                     <ShieldCheck size={18} />
                     Admin Panel
@@ -275,14 +275,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
                 <>
                   <button 
                     onClick={() => setActiveTab('syllabus')}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${activeTab === 'syllabus' ? 'bg-blue-50 text-bt-blue font-medium' : 'text-gray-600 hover:text-gray-900'}`}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 whitespace-nowrap ${activeTab === 'syllabus' ? 'bg-blue-50 text-bt-blue font-bold shadow-sm ring-1 ring-blue-100 transform scale-105' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:shadow-sm'}`}
                   >
                     <Table2 size={18} />
                     Syllabus
                   </button>
                   <button 
                     onClick={() => setActiveTab('analytics')}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${activeTab === 'analytics' ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-600 hover:text-gray-900'}`}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 whitespace-nowrap ${activeTab === 'analytics' ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm ring-1 ring-indigo-100 transform scale-105' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:shadow-sm'}`}
                   >
                     <BarChart2 size={18} />
                     Analytics
@@ -293,21 +293,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
                       <>
                         <button 
                             onClick={() => setActiveTab('practice')}
-                            className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${activeTab === 'practice' ? 'bg-teal-50 text-teal-700 font-medium' : 'text-gray-600 hover:text-gray-900'}`}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 whitespace-nowrap ${activeTab === 'practice' ? 'bg-teal-50 text-teal-700 font-bold shadow-sm ring-1 ring-teal-100 transform scale-105' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:shadow-sm'}`}
                         >
                             <BookCheck size={18} />
                             Practice
                         </button>
                         <button 
                             onClick={() => setActiveTab('exams')}
-                            className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${activeTab === 'exams' ? 'bg-red-50 text-red-700 font-medium' : 'text-gray-600 hover:text-gray-900'}`}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 whitespace-nowrap ${activeTab === 'exams' ? 'bg-red-50 text-red-700 font-bold shadow-sm ring-1 ring-red-100 transform scale-105' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:shadow-sm'}`}
                         >
                             <FileText size={18} />
                             Mock Exams
                         </button>
                         <button 
                             onClick={() => setActiveTab('ai')}
-                            className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${activeTab === 'ai' ? 'bg-purple-50 text-purple-700 font-medium' : 'text-gray-600 hover:text-gray-900'}`}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 whitespace-nowrap ${activeTab === 'ai' ? 'bg-purple-50 text-purple-700 font-bold shadow-sm ring-1 ring-purple-100 transform scale-105' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:shadow-sm'}`}
                         >
                             <BrainCircuit size={18} />
                             Planner
@@ -317,7 +317,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
                   
                   <button 
                     onClick={() => setActiveTab('timetable')}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${activeTab === 'timetable' ? 'bg-orange-50 text-orange-700 font-medium' : 'text-gray-600 hover:text-gray-900'}`}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 whitespace-nowrap ${activeTab === 'timetable' ? 'bg-orange-50 text-orange-700 font-bold shadow-sm ring-1 ring-orange-100 transform scale-105' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:shadow-sm'}`}
                   >
                     <CalendarClock size={18} />
                     Timetable
@@ -413,8 +413,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
                             </h3>
                             <p className="text-gray-600 text-sm max-w-md">
                             {userRole === 'parent' 
-                                ? `${studentUser?.name} has completed ${completedTopics} out of ${totalTopics} major topics at ${studentUser?.coachingInstitute}.`
-                                : `Consistent effort is the key to cracking JEE with ${userCoaching}. You have completed ${completedTopics} out of ${totalTopics} major topics.`
+                                ? `${studentUser?.name} has completed ${completedTopics} out of ${totalTopics} major topics.`
+                                : `Consistent effort is the key to cracking JEE with excellence. You have completed ${completedTopics} out of ${totalTopics} major topics.`
                             }
                             </p>
                         </div>
@@ -567,7 +567,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
 
       <footer className="bg-white border-t border-gray-200 py-6 mt-8">
         <div className="max-w-7xl mx-auto px-4 text-center text-gray-500 text-sm">
-          <p>© {new Date().getFullYear()} JEE PrepTracker. Tailored for {userCoaching}.</p>
+          <p>© {new Date().getFullYear()} JEE PrepTracker. Tailored for your Success.</p>
         </div>
       </footer>
     </div>

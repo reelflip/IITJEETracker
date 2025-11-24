@@ -1,8 +1,8 @@
 
-import React, { useState } from 'react';
-import { User as UserIcon, Mail, Building2, ShieldCheck, Link as LinkIcon, Send, CheckCircle, XCircle, AlertCircle, GraduationCap, Calendar } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { User as UserIcon, Mail, Building2, ShieldCheck, Link as LinkIcon, Send, CheckCircle, XCircle, AlertCircle, GraduationCap, Calendar, Timer, Pencil, Save, X, Loader2 } from 'lucide-react';
 import { authService } from '../services/authService';
-import { User } from '../types';
+import { User, COACHING_INSTITUTES } from '../types';
 
 interface ProfilePageProps {
   user: User; // Full user object to handle logic
@@ -15,6 +15,17 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ user, linkedUser, onCo
   const [connectEmail, setConnectEmail] = useState('');
   const [msg, setMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [saveLoading, setSaveLoading] = useState(false);
+
+  // Edit Profile State
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(user.name);
+  const [editInstitute, setEditInstitute] = useState(user.coachingInstitute || COACHING_INSTITUTES[0]);
+  
+  // Generate years for edit dropdown
+  const currentYear = new Date().getFullYear();
+  const availableYears = [currentYear, currentYear + 1, currentYear + 2, currentYear + 3].map(y => `IIT JEE ${y}`);
+  const [editTargetYear, setEditTargetYear] = useState(user.targetYear || availableYears[0]);
 
   // Derive initials
   const initials = user.name
@@ -23,6 +34,29 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ user, linkedUser, onCo
     .join('')
     .substring(0, 2)
     .toUpperCase();
+
+  // --- Countdown Logic ---
+  const examCountdown = useMemo(() => {
+      if (user.role !== 'student' || !user.targetYear) return null;
+      
+      const match = user.targetYear.match(/20\d{2}/);
+      if (!match) return null;
+      
+      const year = parseInt(match[0]);
+      const targetDate = new Date(year, 0, 24); // Jan 24th
+      const today = new Date();
+      const diffTime = targetDate.getTime() - today.getTime();
+      
+      if (diffTime < 0) return { label: "Status", value: "Completed", color: "text-gray-500" };
+
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      return { 
+          days: diffDays,
+          label: diffDays > 1 ? "Days Remaining" : "Day Remaining",
+          color: diffDays < 100 ? "text-red-600" : "text-bt-blue"
+      };
+  }, [user.targetYear, user.role]);
 
   const handleSendRequest = () => {
     if (!connectEmail) return;
@@ -55,6 +89,34 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ user, linkedUser, onCo
     onConnectionUpdate();
   };
 
+  const handleSaveProfile = () => {
+      if (!editName.trim()) {
+          alert("Name cannot be empty");
+          return;
+      }
+      setSaveLoading(true);
+      
+      setTimeout(() => {
+        const updates: Partial<User> = {
+            name: editName
+        };
+        
+        if (user.role === 'student') {
+            updates.coachingInstitute = editInstitute;
+            updates.targetYear = editTargetYear;
+        }
+
+        const res = authService.updateProfile(user.id, updates);
+        if (res.success) {
+            setIsEditing(false);
+            onConnectionUpdate(); // Refresh dashboard session data
+        } else {
+            alert("Failed to update profile.");
+        }
+        setSaveLoading(false);
+      }, 500);
+  };
+
   return (
     <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
       
@@ -69,18 +131,74 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ user, linkedUser, onCo
                  </div>
               </div>
            </div>
+           
+           {/* Edit Button */}
+           {!isEditing && (
+               <button 
+                 onClick={() => {
+                     setEditName(user.name);
+                     if(user.role==='student') {
+                         setEditInstitute(user.coachingInstitute || COACHING_INSTITUTES[0]);
+                         setEditTargetYear(user.targetYear || availableYears[0]);
+                     }
+                     setIsEditing(true);
+                 }}
+                 className="absolute bottom-4 right-8 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm font-bold backdrop-blur-sm flex items-center gap-2 transition-all"
+               >
+                   <Pencil size={14} /> Edit Profile
+               </button>
+           )}
         </div>
 
         <div className="pt-20 pb-8 px-8">
-           <div className="flex justify-between items-start">
-               <div>
-                    <h1 className="text-3xl font-bold text-gray-900">{user.name}</h1>
-                    <p className="text-gray-500">{user.role === 'parent' ? 'Parent Account' : `JEE Aspirant • ${user.coachingInstitute}`}</p>
+           {/* Profile Header Content */}
+           <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+               <div className="flex-1 w-full">
+                    {isEditing ? (
+                        <div className="space-y-2 mb-2">
+                            <label className="text-xs text-gray-500 uppercase font-bold block">Full Name</label>
+                            <input 
+                                type="text" 
+                                value={editName} 
+                                onChange={e => setEditName(e.target.value)}
+                                className="text-2xl font-bold text-gray-900 border-b-2 border-bt-blue outline-none w-full focus:bg-blue-50/50 rounded px-1"
+                            />
+                        </div>
+                    ) : (
+                        <h1 className="text-3xl font-bold text-gray-900">{user.name}</h1>
+                    )}
+                    
+                    {!isEditing && (
+                        <p className="text-gray-500 mt-1">{user.role === 'parent' ? 'Parent Account' : `JEE Aspirant • ${user.coachingInstitute}`}</p>
+                    )}
                </div>
-               {user.role === 'student' && (
-                   <span className="bg-blue-100 text-blue-800 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
-                       {user.targetYear}
-                   </span>
+               
+               {user.role === 'student' && !isEditing && (
+                   <div className="text-right">
+                       <span className="bg-blue-100 text-blue-800 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide block mb-1">
+                           {user.targetYear}
+                       </span>
+                   </div>
+               )}
+
+               {/* Save/Cancel Actions */}
+               {isEditing && (
+                   <div className="flex gap-2 self-end md:self-start mt-2 md:mt-0">
+                       <button 
+                         onClick={() => setIsEditing(false)} 
+                         disabled={saveLoading}
+                         className="bg-gray-200 text-gray-700 px-3 py-1.5 rounded text-sm font-bold hover:bg-gray-300 flex items-center gap-1 transition-colors"
+                       >
+                           <X size={14} /> Cancel
+                       </button>
+                       <button 
+                         onClick={handleSaveProfile} 
+                         disabled={saveLoading}
+                         className="bg-green-600 text-white px-4 py-1.5 rounded text-sm font-bold hover:bg-green-700 flex items-center gap-1 transition-colors disabled:opacity-70"
+                       >
+                           {saveLoading ? <Loader2 size={14} className="animate-spin"/> : <Save size={14} />} Save Changes
+                       </button>
+                   </div>
                )}
            </div>
 
@@ -101,35 +219,79 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ user, linkedUser, onCo
                  </div>
 
                  {user.role === 'student' && (
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-gray-500 shadow-sm border border-gray-100">
-                        <Building2 size={18} />
+                    <>
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-gray-500 shadow-sm border border-gray-100">
+                            <Building2 size={18} />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-xs text-gray-500 uppercase font-bold">Institute</p>
+                                {isEditing ? (
+                                    <select 
+                                        value={editInstitute}
+                                        onChange={e => setEditInstitute(e.target.value)}
+                                        className="w-full p-1 text-sm border border-gray-300 rounded mt-1 focus:ring-2 focus:ring-bt-blue outline-none bg-white"
+                                    >
+                                        {COACHING_INSTITUTES.map(inst => <option key={inst} value={inst}>{inst}</option>)}
+                                    </select>
+                                ) : (
+                                    <p className="text-gray-900 font-medium">{user.coachingInstitute}</p>
+                                )}
+                            </div>
                         </div>
-                        <div>
-                        <p className="text-xs text-gray-500 uppercase font-bold">Institute</p>
-                        <p className="text-gray-900 font-medium">{user.coachingInstitute}</p>
+
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-gray-500 shadow-sm border border-gray-100">
+                            <Calendar size={18} />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-xs text-gray-500 uppercase font-bold">Target Exam</p>
+                                {isEditing ? (
+                                    <select 
+                                        value={editTargetYear}
+                                        onChange={e => setEditTargetYear(e.target.value)}
+                                        className="w-full p-1 text-sm border border-gray-300 rounded mt-1 focus:ring-2 focus:ring-bt-blue outline-none bg-white"
+                                    >
+                                        {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
+                                    </select>
+                                ) : (
+                                    <p className="text-gray-900 font-medium">{user.targetYear}</p>
+                                )}
+                            </div>
                         </div>
-                    </div>
+                    </>
                  )}
               </div>
 
-              {/* Status / Role Card */}
+              {/* Status / Countdown Card */}
               <div className="bg-blue-50/50 rounded-xl p-6 border border-blue-100 space-y-4">
                  <h3 className="font-semibold text-blue-900 border-b border-blue-200 pb-2 mb-2">
-                     {user.role === 'parent' ? 'Family Access' : 'Subscription Status'}
+                     {user.role === 'parent' ? 'Family Access' : 'Exam Countdown'}
                  </h3>
                  
-                 <div className="flex items-start gap-3">
-                    <ShieldCheck className="text-green-600 mt-1" />
-                    <div>
-                       <p className="font-bold text-gray-900">Active {user.role === 'parent' ? 'Guardian' : 'Student'} Account</p>
-                       <p className="text-sm text-gray-600 mt-1">
-                          {user.role === 'parent' 
-                            ? "You can connect to a student account to view their academic progress." 
-                            : "You have full access to the Syllabus Tracker, Question Bank, and Smart Planner features."}
-                       </p>
-                    </div>
-                 </div>
+                 {user.role === 'student' && examCountdown ? (
+                     <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center text-blue-600 shadow-sm border border-blue-100">
+                            <Timer size={24} />
+                        </div>
+                        <div>
+                            <p className={`text-2xl font-bold ${examCountdown.color}`}>{examCountdown.days}</p>
+                            <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">{examCountdown.label}</p>
+                        </div>
+                     </div>
+                 ) : (
+                     <div className="flex items-start gap-3">
+                        <ShieldCheck className="text-green-600 mt-1" />
+                        <div>
+                        <p className="font-bold text-gray-900">Active {user.role === 'parent' ? 'Guardian' : 'Student'} Account</p>
+                        <p className="text-sm text-gray-600 mt-1">
+                            {user.role === 'parent' 
+                                ? "You can connect to a student account to view their academic progress." 
+                                : "You have full access to the Syllabus Tracker, Question Bank, and Smart Planner features."}
+                        </p>
+                        </div>
+                     </div>
+                 )}
               </div>
 
            </div>
