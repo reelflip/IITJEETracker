@@ -11,7 +11,9 @@ import { AdminPanel } from './AdminPanel';
 import { PerformanceAnalytics } from './PerformanceAnalytics'; 
 import { MockExamInterface } from './MockExamInterface'; 
 import { NoticeBoard } from './NoticeBoard'; 
-import { LayoutDashboard, Table2, BrainCircuit, Search, Menu, X, BookCheck, LogOut, UserCircle, CalendarClock, ShieldCheck, BarChart2, FileText, Baby, Link as LinkIcon, Timer, Save, CheckCircle } from 'lucide-react';
+import { AboutUs } from './AboutUs';
+import { BlogPage } from './BlogPage';
+import { LayoutDashboard, Table2, BrainCircuit, Search, Menu, X, BookCheck, LogOut, UserCircle, CalendarClock, ShieldCheck, BarChart2, FileText, Baby, Link as LinkIcon, Timer, Save, CheckCircle, Info, BookOpen } from 'lucide-react';
 import { authService } from '../services/authService';
 import { Logo } from './Logo'; // Import Logo
 
@@ -25,7 +27,7 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoaching = "Bakliwal Tutorials", userTargetYear = "IIT JEE 2025", userRole = 'student', onLogout }) => {
-  const [activeTab, setActiveTab] = useState<'syllabus' | 'analytics' | 'ai' | 'practice' | 'exams' | 'timetable' | 'profile' | 'admin'>(
+  const [activeTab, setActiveTab] = useState<'syllabus' | 'analytics' | 'ai' | 'practice' | 'exams' | 'timetable' | 'profile' | 'admin' | 'about' | 'blogs'>(
     userRole === 'admin' ? 'admin' : (userRole === 'parent' ? 'profile' : 'syllabus')
   );
 
@@ -329,6 +331,24 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
 
               <div className="flex items-center gap-3">
                 <button 
+                  onClick={() => setActiveTab('blogs')}
+                  className={`flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-lg transition-all ${
+                    activeTab === 'blogs' ? 'bg-gray-800 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  }`}
+                >
+                  <BookOpen size={16} />
+                  Blogs
+                </button>
+                <button 
+                  onClick={() => setActiveTab('about')}
+                  className={`flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-lg transition-all ${
+                    activeTab === 'about' ? 'bg-gray-800 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  }`}
+                >
+                  <Info size={16} />
+                  About
+                </button>
+                <button 
                   onClick={() => setActiveTab('profile')}
                   className={`flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-full transition-all ${
                     activeTab === 'profile' ? 'bg-bt-blue text-white shadow-sm' : 'text-gray-700 bg-gray-100 hover:bg-gray-200'
@@ -361,6 +381,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
           <div className="md:hidden bg-white border-b border-gray-200">
             <div className="px-2 pt-2 pb-3 space-y-1">
                 <button onClick={() => { setActiveTab('syllabus'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2">Syllabus</button>
+                <button onClick={() => { setActiveTab('blogs'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2">Blogs</button>
+                <button onClick={() => { setActiveTab('about'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2">About Us</button>
                 <button onClick={() => { setActiveTab('profile'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2">Profile</button>
                 <button onClick={onLogout} className="block w-full text-left px-3 py-2 text-red-600">Logout</button>
             </div>
@@ -373,6 +395,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
         
         {activeTab === 'admin' && userRole === 'admin' ? (
             <AdminPanel />
+        ) : activeTab === 'about' ? (
+            <AboutUs />
+        ) : activeTab === 'blogs' ? (
+            <BlogPage />
         ) : activeTab === 'syllabus' ? (
           <div className="space-y-6">
             

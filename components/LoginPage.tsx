@@ -1,15 +1,17 @@
 
 import React, { useState } from 'react';
-import { LogIn, User as UserIcon, ArrowRight, Lock, Mail, Building2, Calendar, KeyRound, HelpCircle } from 'lucide-react';
+import { LogIn, User as UserIcon, ArrowRight, Lock, Mail, Building2, Calendar, KeyRound, HelpCircle, Info, BookOpen } from 'lucide-react';
 import { authService } from '../services/authService';
 import { User, COACHING_INSTITUTES, SECURITY_QUESTIONS } from '../types';
 import { Logo } from './Logo';
 
 interface LoginPageProps {
   onLogin: (user: User) => void;
+  onAboutClick: () => void;
+  onBlogsClick: () => void;
 }
 
-export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
+export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onAboutClick, onBlogsClick }) => {
   const [view, setView] = useState<'login' | 'signup' | 'forgot'>('login');
   
   // Generate next 4 years for dropdown
@@ -383,6 +385,22 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                 </p>
             </div>
           )}
+
+          <div className="mt-8 pt-4 border-t border-gray-100 flex flex-row justify-center gap-6">
+             <button 
+                onClick={onAboutClick}
+                className="text-xs font-bold text-gray-600 hover:text-bt-blue flex items-center gap-1.5 transition-colors"
+             >
+                <Info size={14} /> About Us
+             </button>
+             <div className="w-px h-4 bg-gray-300"></div>
+             <button 
+                onClick={onBlogsClick}
+                className="text-xs font-bold text-gray-600 hover:text-bt-blue flex items-center gap-1.5 transition-colors"
+             >
+                <BookOpen size={14} /> Insights Blog
+             </button>
+          </div>
         </div>
       </div>
     </div>

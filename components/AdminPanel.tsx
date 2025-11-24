@@ -2,12 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { authService } from '../services/authService';
 import { contentService } from '../services/contentService';
-import { User, TopicProgress, Status, Notice, MotivationItem, Subject, ExamPaper, Question } from '../types';
+import { User, TopicProgress, Status, Notice, MotivationItem, Subject, ExamPaper, Question, BlogPost } from '../types';
 import { SYLLABUS_DATA, INITIAL_PROGRESS, MOCK_QUESTION_DB } from '../constants';
-import { Trash2, Eye, ShieldCheck, GraduationCap, X, Search, Lock, Megaphone, Quote, Plus, Layout, Mail, Send, Users, FileText, CheckSquare } from 'lucide-react';
+import { Trash2, Eye, ShieldCheck, GraduationCap, X, Search, Lock, Megaphone, Quote, Plus, Layout, Mail, Send, Users, FileText, CheckSquare, BookOpen, PenTool } from 'lucide-react';
 
 export const AdminPanel: React.FC = () => {
-    const [activeTab, setActiveTab] = useState<'users' | 'content' | 'communication' | 'tests'>('users');
+    const [activeTab, setActiveTab] = useState<'users' | 'content' | 'blogs' | 'tests' | 'communication'>('users');
     
     // --- USER MGMT STATE ---
     const [users, setUsers] = useState<User[]>([]);
@@ -25,6 +25,14 @@ export const AdminPanel: React.FC = () => {
 
     const [newQuote, setNewQuote] = useState('');
     const [newAuthor, setNewAuthor] = useState('');
+
+    // --- BLOG MGMT STATE ---
+    const [blogs, setBlogs] = useState<BlogPost[]>([]);
+    const [blogTitle, setBlogTitle] = useState('');
+    const [blogExcerpt, setBlogExcerpt] = useState('');
+    const [blogContent, setBlogContent] = useState('');
+    const [blogCategory, setBlogCategory] = useState<'Strategy' | 'Mental Health' | 'Success Story' | 'Academic'>('Strategy');
+    const [blogImage, setBlogImage] = useState('');
 
     // --- TEST SERIES STATE ---
     const [customExams, setCustomExams] = useState<ExamPaper[]>([]);
@@ -44,6 +52,8 @@ export const AdminPanel: React.FC = () => {
             setUsers(authService.getUsers());
         } else if (activeTab === 'tests') {
             setCustomExams(contentService.getCustomExams());
+        } else if (activeTab === 'blogs') {
+            setBlogs(contentService.getBlogs());
         } else {
             setNotices(contentService.getNotices());
             setMotivations(contentService.getMotivation());
@@ -120,6 +130,36 @@ export const AdminPanel: React.FC = () => {
         if(confirm("Delete this item?")) {
             contentService.deleteMotivation(id);
             setMotivations(motivations.filter(m => m.id !== id));
+        }
+    };
+
+    // --- BLOG HANDLERS ---
+    const handlePublishBlog = (e: React.FormEvent) => {
+        e.preventDefault();
+        if(!blogTitle || !blogContent) return;
+
+        const added = contentService.addBlog({
+            title: blogTitle,
+            excerpt: blogExcerpt || blogContent.substring(0, 100) + '...',
+            content: blogContent,
+            category: blogCategory,
+            author: 'Admin',
+            imageUrl: blogImage
+        });
+        setBlogs([added, ...blogs]);
+        
+        // Reset
+        setBlogTitle('');
+        setBlogExcerpt('');
+        setBlogContent('');
+        setBlogImage('');
+        alert("Blog post published successfully!");
+    };
+
+    const handleDeleteBlog = (id: string) => {
+        if(confirm("Delete this blog post?")) {
+            contentService.deleteBlog(id);
+            setBlogs(blogs.filter(b => b.id !== id));
         }
     };
 
@@ -230,6 +270,14 @@ export const AdminPanel: React.FC = () => {
                             }`}
                         >
                             <Megaphone size={16} /> Content
+                        </button>
+                        <button 
+                            onClick={() => setActiveTab('blogs')}
+                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors flex items-center gap-2 whitespace-nowrap ${
+                                activeTab === 'blogs' ? 'bg-bt-blue text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                            }`}
+                        >
+                            <BookOpen size={16} /> Blogs
                         </button>
                         <button 
                             onClick={() => setActiveTab('tests')}
@@ -418,6 +466,93 @@ export const AdminPanel: React.FC = () => {
                         </div>
                     </div>
 
+                </div>
+            )}
+
+            {/* --- BLOGS TAB --- */}
+            {activeTab === 'blogs' && (
+                <div className="bg-white rounded-xl shadow border border-gray-200 p-6 animate-in fade-in">
+                    <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
+                        <PenTool className="text-pink-600" /> Manage Blog Posts
+                    </h3>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        {/* Blog Editor */}
+                        <div className="lg:col-span-2 space-y-4">
+                            <input 
+                                type="text" 
+                                placeholder="Article Title"
+                                value={blogTitle}
+                                onChange={e => setBlogTitle(e.target.value)}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bt-blue outline-none font-bold text-lg"
+                            />
+                            
+                            <div className="flex gap-4">
+                                <select 
+                                    value={blogCategory}
+                                    onChange={e => setBlogCategory(e.target.value as any)}
+                                    className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bt-blue outline-none bg-white"
+                                >
+                                    <option value="Strategy">Strategy</option>
+                                    <option value="Mental Health">Mental Health</option>
+                                    <option value="Success Story">Success Story</option>
+                                    <option value="Academic">Academic</option>
+                                </select>
+                                <input 
+                                    type="text" 
+                                    placeholder="Cover Image URL (Optional)"
+                                    value={blogImage}
+                                    onChange={e => setBlogImage(e.target.value)}
+                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bt-blue outline-none text-sm"
+                                />
+                            </div>
+
+                            <textarea 
+                                placeholder="Short Excerpt (displayed in card preview)..."
+                                value={blogExcerpt}
+                                onChange={e => setBlogExcerpt(e.target.value)}
+                                rows={2}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bt-blue outline-none text-sm resize-none"
+                            />
+
+                            <textarea 
+                                placeholder="Full Content (Markdown Supported)..."
+                                value={blogContent}
+                                onChange={e => setBlogContent(e.target.value)}
+                                rows={12}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bt-blue outline-none font-mono text-sm"
+                            />
+
+                            <button 
+                                onClick={handlePublishBlog}
+                                className="bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-6 rounded-lg shadow transition-colors flex items-center gap-2"
+                            >
+                                <Send size={16} /> Publish Article
+                            </button>
+                        </div>
+
+                        {/* Existing Blogs List */}
+                        <div className="border-l border-gray-200 pl-8 space-y-4">
+                            <h4 className="font-bold text-gray-700 mb-2">Published Articles ({blogs.length})</h4>
+                            <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
+                                {blogs.length === 0 && <p className="text-gray-400 text-sm italic">No articles yet.</p>}
+                                {blogs.map(blog => (
+                                    <div key={blog.id} className="p-3 bg-gray-50 rounded border border-gray-200 hover:bg-white hover:shadow-sm transition-all group">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <span className="text-[10px] bg-white border px-1.5 py-0.5 rounded text-gray-500 uppercase font-bold">{blog.category}</span>
+                                                <h5 className="font-bold text-sm text-gray-800 mt-1 line-clamp-1">{blog.title}</h5>
+                                                <p className="text-[10px] text-gray-400">{blog.date}</p>
+                                            </div>
+                                            <button onClick={() => handleDeleteBlog(blog.id)} className="text-gray-400 hover:text-red-500 p-1">
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
 

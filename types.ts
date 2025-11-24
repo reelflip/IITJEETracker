@@ -173,3 +173,17 @@ export interface MotivationItem {
   content: string; // Text for quote, URL for image
   author?: string;
 }
+
+// --- BLOG TYPES ---
+
+export interface BlogPost {
+  id: string;
+  title: string;
+  excerpt: string;
+  content: string;
+  author: string;
+  date: string;
+  readTime: string;
+  category: 'Strategy' | 'Mental Health' | 'Success Story' | 'Academic';
+  imageUrl?: string;
+}
