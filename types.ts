@@ -156,3 +156,20 @@ export interface ExamResult {
   accuracy: number;
   timeTaken: string;
 }
+
+// --- NOTICE BOARD & MOTIVATION TYPES ---
+
+export interface Notice {
+  id: string;
+  title: string;
+  content: string;
+  date: string;
+  isImportant: boolean;
+}
+
+export interface MotivationItem {
+  id: string;
+  type: 'quote' | 'image';
+  content: string; // Text for quote, URL for image
+  author?: string;
+}

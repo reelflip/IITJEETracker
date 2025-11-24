@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { SYLLABUS_DATA, INITIAL_PROGRESS } from '../constants';
 import { TopicProgress, Subject, Status, TopicPracticeStats, User, WeeklySchedule } from '../types';
 import { TopicRow } from './TopicRow';
@@ -10,7 +10,8 @@ import { ProfilePage } from './ProfilePage';
 import { AdminPanel } from './AdminPanel';
 import { PerformanceAnalytics } from './PerformanceAnalytics'; 
 import { MockExamInterface } from './MockExamInterface'; 
-import { LayoutDashboard, Table2, BrainCircuit, Search, Menu, X, BookCheck, LogOut, UserCircle, CalendarClock, ShieldCheck, BarChart2, FileText, Baby, Link as LinkIcon } from 'lucide-react';
+import { NoticeBoard } from './NoticeBoard'; // Import NoticeBoard
+import { LayoutDashboard, Table2, BrainCircuit, Search, Menu, X, BookCheck, LogOut, UserCircle, CalendarClock, ShieldCheck, BarChart2, FileText, Baby, Link as LinkIcon, Timer } from 'lucide-react';
 import { authService } from '../services/authService';
 
 interface DashboardProps {
@@ -31,11 +32,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
   const [studentUser, setStudentUser] = useState<User | null>(null);
   const [pendingRequestFrom, setPendingRequestFrom] = useState<User | null>(null);
 
-  // --- Determine who is the "Target" of the dashboard ---
-  // If Student: Target is Self
-  // If Parent: Target is Linked Student (if any)
-  // If Admin: Irrelevant (uses Admin Panel)
-  
   const [progressKey, setProgressKey] = useState(`bt-jee-tracker-progress-${userId}`);
   const [practiceKey, setPracticeKey] = useState(`bt-jee-tracker-practice-${userId}`);
   const [timetableKey, setTimetableKey] = useState(`bt-jee-tracker-timetable-${userId}`);
@@ -147,6 +143,35 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
     .join('')
     .substring(0, 2)
     .toUpperCase();
+
+  // --- Countdown Logic ---
+  const displayTargetYear = studentUser ? (studentUser.targetYear || "IIT JEE 2025") : (userTargetYear || "IIT JEE 2025");
+
+  const examCountdown = useMemo(() => {
+      const match = displayTargetYear.match(/20\d{2}/);
+      if (!match) return null;
+      const year = parseInt(match[0]);
+      // Target Date: Jan 24th of the target year (Tentative JEE Mains Start)
+      const targetDate = new Date(year, 0, 24); 
+      const today = new Date();
+      const diffTime = targetDate.getTime() - today.getTime();
+      
+      if (diffTime < 0) return { label: "Exam Status", value: "Completed", color: "text-gray-500" };
+
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays > 365) {
+          const years = Math.floor(diffDays / 365);
+          const months = Math.floor((diffDays % 365) / 30);
+          return { label: "Time Remaining", value: `${years} Yr ${months} Mo`, color: "text-bt-blue" };
+      }
+      if (diffDays > 60) {
+          const months = Math.floor(diffDays / 30);
+          const days = diffDays % 30;
+          return { label: "Time Remaining", value: `${months} Mo ${days} Days`, color: "text-indigo-600" };
+      }
+      return { label: "Crunch Time", value: `${diffDays} Days Left`, color: "text-red-600" };
+  }, [displayTargetYear]);
 
   // Save changes ONLY if role is student
   useEffect(() => {
@@ -373,7 +398,36 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
 
             {(userRole !== 'parent' || studentUser) && (
               <>
+                {/* Insert Notice Board Here for Students/Parents */}
+                {userRole !== 'admin' && <NoticeBoard />}
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm md:col-span-2 flex items-center justify-between relative overflow-hidden">
+                        <div className="z-10">
+                            <h3 className="text-gray-800 font-semibold mb-2">
+                                {userRole === 'parent' ? `Student Overview: ${studentUser?.name}` : `Welcome Back, ${userName}!`}
+                            </h3>
+                            <p className="text-gray-600 text-sm max-w-md">
+                            {userRole === 'parent' 
+                                ? `${studentUser?.name} has completed ${completedTopics} out of ${totalTopics} major topics at ${studentUser?.coachingInstitute}.`
+                                : `Consistent effort is the key to cracking JEE with ${userCoaching}. You have completed ${completedTopics} out of ${totalTopics} major topics.`
+                            }
+                            </p>
+                        </div>
+                        {examCountdown && (
+                            <div className="hidden md:flex flex-col items-end z-10 bg-slate-50 px-4 py-2 rounded-lg border border-gray-100">
+                                <div className="flex items-center gap-1 text-gray-400 mb-1">
+                                    <Timer size={14} />
+                                    <span className="text-[10px] font-bold uppercase tracking-wider">{examCountdown.label}</span>
+                                </div>
+                                <span className={`text-2xl font-bold ${examCountdown.color}`}>{examCountdown.value}</span>
+                                <span className="text-[10px] text-gray-400 font-medium">Target: {displayTargetYear}</span>
+                            </div>
+                        )}
+                        {/* Background decoration */}
+                        <div className="absolute right-0 top-0 w-32 h-full bg-gradient-to-l from-gray-50 to-transparent -z-0"></div>
+                    </div>
+
                     <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
                         <div className="flex items-center justify-between mb-4">
                         <h3 className="text-gray-500 font-medium text-sm">Overall Progress</h3>
@@ -389,18 +443,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
                             style={{ width: `${completionPercentage}%` }} 
                         />
                         </div>
-                    </div>
-
-                    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm md:col-span-2 flex flex-col justify-center">
-                        <h3 className="text-gray-800 font-semibold mb-2">
-                            {userRole === 'parent' ? `Student Overview: ${studentUser?.name}` : `Welcome Back, ${userName}!`}
-                        </h3>
-                        <p className="text-gray-600 text-sm">
-                        {userRole === 'parent' 
-                            ? `${studentUser?.name} has completed ${completedTopics} out of ${totalTopics} major topics at ${studentUser?.coachingInstitute}.`
-                            : `Consistent effort is the key to cracking JEE with ${userCoaching}. You have completed ${completedTopics} out of ${totalTopics} major topics.`
-                        }
-                        </p>
                     </div>
                 </div>
 
