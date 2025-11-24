@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { PAST_PAPERS_METADATA, generateMockPaper } from '../constants';
+import { contentService } from '../services/contentService'; // Import content service
 import { ExamPaper, QuestionPaletteStatus, Question, ExamResult } from '../types';
-import { Clock, Flag, RotateCcw, ChevronRight, Grid, User, ArrowLeft } from 'lucide-react';
+import { Clock, Flag, RotateCcw, ChevronRight, Grid, User, ArrowLeft, Star } from 'lucide-react';
 
 // --- SUB-COMPONENT: ACTIVE EXAM SESSION ---
 // This isolates the exam logic and hooks (timer, effects) so they are only mounted when needed.
@@ -180,7 +181,7 @@ const ActiveExamSession: React.FC<ActiveExamSessionProps> = ({ paper, onFinish }
                     <div className="flex border-b border-gray-200 bg-gray-50 overflow-x-auto">
                         {paper.sections.map((sec, idx) => (
                             <button
-                                key={sec.subject}
+                                key={idx}
                                 onClick={() => { setCurrentSectionIndex(idx); setCurrentQuestionIndex(0); }}
                                 className={`px-6 py-3 font-medium text-sm whitespace-nowrap ${currentSectionIndex === idx ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
                             >
@@ -288,39 +289,82 @@ export const MockExamInterface: React.FC = () => {
     const [selectedPaperId, setSelectedPaperId] = useState<string | null>(null);
     const [paper, setPaper] = useState<ExamPaper | null>(null);
     const [result, setResult] = useState<ExamResult | null>(null);
+    const [customExams, setCustomExams] = useState<ExamPaper[]>([]);
+
+    // Load custom exams
+    useEffect(() => {
+        setCustomExams(contentService.getCustomExams());
+    }, []);
 
     // --- VIEW 1: PAPER LIST ---
     if (view === 'list') {
         return (
-            <div className="max-w-5xl mx-auto space-y-6 animate-in fade-in">
+            <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in">
                 <div className="bg-gradient-to-r from-blue-700 to-indigo-800 p-8 rounded-2xl text-white shadow-lg">
                     <h1 className="text-3xl font-bold mb-2">Previous Year Papers Archive</h1>
                     <p className="text-blue-100">Attempt actual JEE papers in a simulated NTA-style environment.</p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {PAST_PAPERS_METADATA.map((meta) => (
-                        <div key={meta.id} className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all flex justify-between items-center group">
-                            <div>
-                                <h3 className="font-bold text-gray-800 text-lg group-hover:text-blue-600 transition-colors">{meta.title}</h3>
-                                <div className="flex gap-3 mt-2 text-sm text-gray-500">
-                                    <span className="bg-gray-100 px-2 py-0.5 rounded flex items-center gap-1"><Clock size={14}/> {meta.duration} Mins</span>
-                                    <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${meta.type === 'Mains' ? 'bg-orange-100 text-orange-700' : 'bg-purple-100 text-purple-700'}`}>
-                                        {meta.type}
-                                    </span>
+                {/* Custom Test Series Section */}
+                {customExams.length > 0 && (
+                    <div>
+                        <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                            <Star className="text-yellow-500 fill-yellow-500" /> Admin Test Series
+                        </h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {customExams.map((exam) => (
+                                <div key={exam.id} className="bg-white p-6 rounded-xl border border-blue-200 shadow-sm hover:shadow-md transition-all flex justify-between items-center group bg-blue-50/50">
+                                    <div>
+                                        <h3 className="font-bold text-blue-900 text-lg group-hover:text-blue-700 transition-colors">{exam.title}</h3>
+                                        <div className="flex gap-3 mt-2 text-sm text-gray-500">
+                                            <span className="bg-white px-2 py-0.5 rounded flex items-center gap-1 border border-gray-200"><Clock size={14}/> {exam.durationMinutes} Mins</span>
+                                            <span className="px-2 py-0.5 rounded text-xs font-bold uppercase bg-green-100 text-green-700">
+                                                Custom
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <button 
+                                        onClick={() => {
+                                            setPaper(exam); // Custom papers are fully formed
+                                            setView('intro');
+                                        }}
+                                        className="bg-indigo-600 text-white px-5 py-2 rounded-lg font-medium hover:bg-indigo-700"
+                                    >
+                                        Start
+                                    </button>
                                 </div>
-                            </div>
-                            <button 
-                                onClick={() => {
-                                    setSelectedPaperId(meta.id);
-                                    setView('intro');
-                                }}
-                                className="bg-blue-600 text-white px-5 py-2 rounded-lg font-medium hover:bg-blue-700"
-                            >
-                                Start
-                            </button>
+                            ))}
                         </div>
-                    ))}
+                    </div>
+                )}
+
+                {/* Past Papers Section */}
+                <div>
+                    <h2 className="text-xl font-bold text-gray-800 mb-4">Official Past Papers</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {PAST_PAPERS_METADATA.map((meta) => (
+                            <div key={meta.id} className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all flex justify-between items-center group">
+                                <div>
+                                    <h3 className="font-bold text-gray-800 text-lg group-hover:text-blue-600 transition-colors">{meta.title}</h3>
+                                    <div className="flex gap-3 mt-2 text-sm text-gray-500">
+                                        <span className="bg-gray-100 px-2 py-0.5 rounded flex items-center gap-1"><Clock size={14}/> {meta.duration} Mins</span>
+                                        <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${meta.type === 'Mains' ? 'bg-orange-100 text-orange-700' : 'bg-purple-100 text-purple-700'}`}>
+                                            {meta.type}
+                                        </span>
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={() => {
+                                        setSelectedPaperId(meta.id);
+                                        setView('intro');
+                                    }}
+                                    className="bg-blue-600 text-white px-5 py-2 rounded-lg font-medium hover:bg-blue-700"
+                                >
+                                    Start
+                                </button>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
         );
@@ -328,14 +372,18 @@ export const MockExamInterface: React.FC = () => {
 
     // --- VIEW 2: INSTRUCTIONS ---
     if (view === 'intro') {
+        // Note: 'paper' might be set (Custom) or we might need to generate it (Past Paper)
+        const currentTitle = paper ? paper.title : PAST_PAPERS_METADATA.find(p => p.id === selectedPaperId)?.title;
+        const currentDuration = paper ? paper.durationMinutes : 180;
+
         return (
             <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden animate-in zoom-in-95 duration-200">
                 <div className="bg-gray-50 p-6 border-b border-gray-200">
-                    <h2 className="text-2xl font-bold text-gray-800">Instructions</h2>
+                    <h2 className="text-2xl font-bold text-gray-800">Instructions - {currentTitle}</h2>
                     <p className="text-gray-500">Please read carefully before starting.</p>
                 </div>
                 <div className="p-8 space-y-4 text-gray-700">
-                    <p>1. Total duration is <strong>180 minutes</strong>.</p>
+                    <p>1. Total duration is <strong>{currentDuration} minutes</strong>.</p>
                     <p>2. The clock will be set at the server. The countdown timer in the top right corner of screen will display the remaining time available for you to complete the examination.</p>
                     <p>3. The question palette displayed on the right side of screen will show the status of each question using one of the following symbols:</p>
                     <div className="grid grid-cols-2 gap-4 my-4 pl-4 border-l-2 border-blue-500">
@@ -347,13 +395,19 @@ export const MockExamInterface: React.FC = () => {
                     <p>4. <strong>Marking Scheme:</strong> Correct Answer: <span className="text-green-600 font-bold">+4</span>, Incorrect Answer: <span className="text-red-600 font-bold">-1</span>, Unanswered: 0.</p>
                 </div>
                 <div className="p-6 border-t border-gray-200 flex justify-between items-center bg-gray-50">
-                    <button onClick={() => setView('list')} className="text-gray-600 font-medium hover:text-gray-900">Cancel</button>
+                    <button onClick={() => { setView('list'); setPaper(null); }} className="text-gray-600 font-medium hover:text-gray-900">Cancel</button>
                     <button 
                         onClick={() => {
-                            const p = generateMockPaper(selectedPaperId!);
-                            if (p) {
-                                setPaper(p);
+                            if (paper) {
+                                // Already loaded (Custom Exam)
                                 setView('active');
+                            } else if (selectedPaperId) {
+                                // Needs generation (Past Paper)
+                                const p = generateMockPaper(selectedPaperId);
+                                if (p) {
+                                    setPaper(p);
+                                    setView('active');
+                                }
                             }
                         }}
                         className="bg-blue-600 text-white px-8 py-3 rounded-lg font-bold hover:bg-blue-700 shadow-md transform active:scale-95 transition-all"
@@ -382,7 +436,7 @@ export const MockExamInterface: React.FC = () => {
     if (view === 'result' && result && paper) {
         return (
             <div className="max-w-4xl mx-auto space-y-6 animate-in zoom-in-95 duration-300">
-                 <button onClick={() => setView('list')} className="text-gray-500 hover:text-gray-900 flex items-center gap-2 mb-4">
+                 <button onClick={() => { setView('list'); setPaper(null); setResult(null); }} className="text-gray-500 hover:text-gray-900 flex items-center gap-2 mb-4">
                     <ArrowLeft size={16} /> Back to Paper List
                  </button>
                  

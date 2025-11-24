@@ -1,7 +1,8 @@
 
-import { Notice, MotivationItem } from '../types';
+import { Notice, MotivationItem, ExamPaper } from '../types';
 
 const CONTENT_STORAGE_KEY = 'bt-jee-tracker-content';
+const CUSTOM_EXAMS_KEY = 'bt-jee-tracker-custom-exams';
 
 interface ContentData {
     notices: Notice[];
@@ -61,6 +62,20 @@ const saveContent = (data: ContentData) => {
     localStorage.setItem(CONTENT_STORAGE_KEY, JSON.stringify(data));
 };
 
+// --- EXAM STORAGE ---
+const getCustomExams = (): ExamPaper[] => {
+    try {
+        const stored = localStorage.getItem(CUSTOM_EXAMS_KEY);
+        return stored ? JSON.parse(stored) : [];
+    } catch {
+        return [];
+    }
+};
+
+const saveCustomExams = (exams: ExamPaper[]) => {
+    localStorage.setItem(CUSTOM_EXAMS_KEY, JSON.stringify(exams));
+};
+
 export const contentService = {
     // --- Notices ---
     getNotices: () => getContent().notices,
@@ -108,5 +123,20 @@ export const contentService = {
         const data = getContent();
         data.motivation = data.motivation.filter(m => m.id !== id);
         saveContent(data);
+    },
+
+    // --- Custom Exams ---
+    getCustomExams: () => getCustomExams(),
+
+    addCustomExam: (exam: ExamPaper) => {
+        const exams = getCustomExams();
+        exams.push(exam);
+        saveCustomExams(exams);
+    },
+
+    deleteCustomExam: (id: string) => {
+        const exams = getCustomExams();
+        const filtered = exams.filter(e => e.id !== id);
+        saveCustomExams(filtered);
     }
 };

@@ -113,13 +113,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     }, 600);
   };
 
-  const handleReset = () => {
-    if (confirm("FACTORY RESET: This will delete ALL users, progress, and settings. Are you sure?")) {
-        localStorage.clear();
-        window.location.reload();
-    }
-  };
-
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
@@ -393,15 +386,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                 </p>
             </div>
           )}
-
-          <div className="mt-8 pt-4 border-t border-gray-100 flex flex-col items-center gap-2">
-             <button 
-                onClick={handleReset}
-                className="text-[10px] text-red-400 hover:text-red-600 flex items-center gap-1 mt-2 opacity-60 hover:opacity-100 transition-opacity"
-             >
-                <AlertTriangle size={10} /> Reset App Data
-             </button>
-          </div>
         </div>
       </div>
     </div>

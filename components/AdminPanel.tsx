@@ -2,12 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { authService } from '../services/authService';
 import { contentService } from '../services/contentService';
-import { User, TopicProgress, Status, Notice, MotivationItem } from '../types';
-import { SYLLABUS_DATA, INITIAL_PROGRESS } from '../constants';
-import { Trash2, Eye, ShieldCheck, GraduationCap, X, Search, Lock, Megaphone, Quote, Plus, Layout } from 'lucide-react';
+import { User, TopicProgress, Status, Notice, MotivationItem, Subject, ExamPaper, Question } from '../types';
+import { SYLLABUS_DATA, INITIAL_PROGRESS, MOCK_QUESTION_DB } from '../constants';
+import { Trash2, Eye, ShieldCheck, GraduationCap, X, Search, Lock, Megaphone, Quote, Plus, Layout, Mail, Send, Users, FileText, CheckSquare } from 'lucide-react';
 
 export const AdminPanel: React.FC = () => {
-    const [activeTab, setActiveTab] = useState<'users' | 'content'>('users');
+    const [activeTab, setActiveTab] = useState<'users' | 'content' | 'communication' | 'tests'>('users');
     
     // --- USER MGMT STATE ---
     const [users, setUsers] = useState<User[]>([]);
@@ -26,10 +26,24 @@ export const AdminPanel: React.FC = () => {
     const [newQuote, setNewQuote] = useState('');
     const [newAuthor, setNewAuthor] = useState('');
 
+    // --- TEST SERIES STATE ---
+    const [customExams, setCustomExams] = useState<ExamPaper[]>([]);
+    const [examTitle, setExamTitle] = useState('');
+    const [examDuration, setExamDuration] = useState(180);
+    const [selectedQuestions, setSelectedQuestions] = useState<Question[]>([]);
+    const [questionSubjectFilter, setQuestionSubjectFilter] = useState<Subject>(Subject.PHYSICS);
+
+    // --- COMMUNICATION STATE ---
+    const [emailSubject, setEmailSubject] = useState('');
+    const [emailBody, setEmailBody] = useState('');
+    const [sendingEmail, setSendingEmail] = useState(false);
+
     useEffect(() => {
         // Load data based on tab
-        if (activeTab === 'users') {
+        if (activeTab === 'users' || activeTab === 'communication') {
             setUsers(authService.getUsers());
+        } else if (activeTab === 'tests') {
+            setCustomExams(contentService.getCustomExams());
         } else {
             setNotices(contentService.getNotices());
             setMotivations(contentService.getMotivation());
@@ -109,6 +123,78 @@ export const AdminPanel: React.FC = () => {
         }
     };
 
+    // --- TEST SERIES HANDLERS ---
+    const handleAddQuestionToExam = (q: Question) => {
+        const newQ = { ...q, id: `custom-${Date.now()}-${Math.random()}` }; // Unique ID for exam context
+        setSelectedQuestions([...selectedQuestions, newQ]);
+    };
+
+    const handleRemoveQuestionFromExam = (idx: number) => {
+        const newList = [...selectedQuestions];
+        newList.splice(idx, 1);
+        setSelectedQuestions(newList);
+    };
+
+    const handleCreateExam = () => {
+        if (!examTitle) {
+            alert("Please enter an exam title.");
+            return;
+        }
+        if (selectedQuestions.length === 0) {
+            alert("Please add at least one question.");
+            return;
+        }
+
+        // Group questions by subject
+        const sections = [
+            { subject: Subject.PHYSICS, questions: selectedQuestions.filter(q => q.subject === Subject.PHYSICS) },
+            { subject: Subject.CHEMISTRY, questions: selectedQuestions.filter(q => q.subject === Subject.CHEMISTRY) },
+            { subject: Subject.MATHS, questions: selectedQuestions.filter(q => q.subject === Subject.MATHS) },
+        ].filter(s => s.questions.length > 0);
+
+        const newExam: ExamPaper = {
+            id: `custom-exam-${Date.now()}`,
+            title: examTitle,
+            year: new Date().getFullYear().toString(),
+            type: 'Mains', // Defaulting to Mains style for simplicity
+            durationMinutes: examDuration,
+            totalMarks: selectedQuestions.length * 4,
+            sections
+        };
+
+        contentService.addCustomExam(newExam);
+        setCustomExams([...customExams, newExam]);
+        
+        // Reset Form
+        setExamTitle('');
+        setSelectedQuestions([]);
+        alert("Test created successfully! Students can now see it in Mock Exams.");
+    };
+
+    const handleDeleteExam = (id: string) => {
+        if (confirm("Are you sure? This will remove the test for all students.")) {
+            contentService.deleteCustomExam(id);
+            setCustomExams(customExams.filter(e => e.id !== id));
+        }
+    };
+
+    // --- COMMUNICATION HANDLERS ---
+    const handleSendBroadcast = (e: React.FormEvent) => {
+        e.preventDefault();
+        if(!emailSubject || !emailBody) return;
+        
+        setSendingEmail(true);
+        const recipients = users.filter(u => u.role !== 'admin');
+        
+        // Simulate delay and API call
+        setTimeout(() => {
+            alert(`📢 Broadcast Sent Successfully!\n\nTo: ${recipients.length} registered users\nSubject: ${emailSubject}\n\n(This is a simulated email service)`);
+            setSendingEmail(false);
+            setEmailSubject('');
+            setEmailBody('');
+        }, 1500);
+    };
+
     const filteredUsers = users.filter(u => 
         u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
         u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -120,18 +206,18 @@ export const AdminPanel: React.FC = () => {
             
             {/* Admin Header */}
             <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-                <div className="bg-gray-900 p-6 text-white flex justify-between items-center">
+                <div className="bg-gray-900 p-6 text-white flex flex-col md:flex-row justify-between md:items-center gap-4">
                     <div>
                         <h2 className="text-2xl font-bold flex items-center gap-2">
                             <ShieldCheck className="text-green-400" /> Admin Console
                         </h2>
-                        <p className="text-gray-400 text-sm mt-1">Manage platform, users, and content.</p>
+                        <p className="text-gray-400 text-sm mt-1">Manage platform, users, and communication.</p>
                     </div>
                     
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 overflow-x-auto pb-1 md:pb-0">
                         <button 
                             onClick={() => setActiveTab('users')}
-                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors flex items-center gap-2 ${
+                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors flex items-center gap-2 whitespace-nowrap ${
                                 activeTab === 'users' ? 'bg-bt-blue text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                             }`}
                         >
@@ -139,11 +225,27 @@ export const AdminPanel: React.FC = () => {
                         </button>
                         <button 
                             onClick={() => setActiveTab('content')}
-                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors flex items-center gap-2 ${
+                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors flex items-center gap-2 whitespace-nowrap ${
                                 activeTab === 'content' ? 'bg-bt-blue text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                             }`}
                         >
                             <Megaphone size={16} /> Content
+                        </button>
+                        <button 
+                            onClick={() => setActiveTab('tests')}
+                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors flex items-center gap-2 whitespace-nowrap ${
+                                activeTab === 'tests' ? 'bg-bt-blue text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                            }`}
+                        >
+                            <FileText size={16} /> Test Series
+                        </button>
+                        <button 
+                            onClick={() => setActiveTab('communication')}
+                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors flex items-center gap-2 whitespace-nowrap ${
+                                activeTab === 'communication' ? 'bg-bt-blue text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                            }`}
+                        >
+                            <Mail size={16} /> Communication
                         </button>
                     </div>
                 </div>
@@ -152,9 +254,9 @@ export const AdminPanel: React.FC = () => {
             {/* --- USERS TAB --- */}
             {activeTab === 'users' && (
                 <div className="bg-white rounded-xl shadow border border-gray-200 p-6 animate-in fade-in">
-                    <div className="flex justify-between items-center mb-6">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                         <h3 className="text-lg font-bold text-gray-800">Registered Users</h3>
-                        <div className="relative w-64">
+                        <div className="relative w-full md:w-64">
                             <Search className="absolute left-3 top-2.5 text-gray-400 w-4 h-4" />
                             <input 
                                 type="text" 
@@ -316,6 +418,172 @@ export const AdminPanel: React.FC = () => {
                         </div>
                     </div>
 
+                </div>
+            )}
+
+            {/* --- TEST SERIES TAB --- */}
+            {activeTab === 'tests' && (
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 animate-in fade-in">
+                    {/* Creator Panel */}
+                    <div className="lg:col-span-3 bg-white rounded-xl shadow border border-gray-200 p-6">
+                        <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                            <FileText className="text-bt-blue" /> Create New Mock Test
+                        </h3>
+                        
+                        <div className="space-y-4 mb-6">
+                            <input 
+                                type="text" 
+                                placeholder="Test Title (e.g., Major Test 4 - Physics)" 
+                                className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-bt-blue"
+                                value={examTitle}
+                                onChange={e => setExamTitle(e.target.value)}
+                            />
+                            <div className="flex gap-4 items-center">
+                                <label className="text-sm text-gray-600">Duration (mins):</label>
+                                <input 
+                                    type="number" 
+                                    value={examDuration}
+                                    onChange={e => setExamDuration(parseInt(e.target.value) || 0)}
+                                    className="w-24 px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-bt-blue"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Question Picker */}
+                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4">
+                            <div className="flex justify-between items-center mb-3">
+                                <h4 className="text-sm font-bold text-gray-700">Add Questions from Bank</h4>
+                                <select 
+                                    className="text-xs border rounded p-1"
+                                    value={questionSubjectFilter}
+                                    onChange={e => setQuestionSubjectFilter(e.target.value as Subject)}
+                                >
+                                    {Object.values(Subject).map(s => <option key={s} value={s}>{s}</option>)}
+                                </select>
+                            </div>
+                            
+                            <div className="max-h-64 overflow-y-auto space-y-2 pr-2">
+                                {(MOCK_QUESTION_DB[questionSubjectFilter] || []).map((q, idx) => {
+                                    // Cast q to Question to ensure type safety if needed, though structure matches
+                                    const fullQ = { ...q, subject: questionSubjectFilter } as Question;
+                                    return (
+                                        <div key={idx} className="bg-white p-3 rounded border text-sm flex gap-3 hover:shadow-sm cursor-pointer group" onClick={() => handleAddQuestionToExam(fullQ)}>
+                                            <Plus size={16} className="text-green-600 mt-0.5 flex-shrink-0" />
+                                            <div>
+                                                <p className="line-clamp-2 text-gray-800">{q.questionText}</p>
+                                                <p className="text-xs text-gray-400 mt-1">Correct: {q.correctAnswer}</p>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Selected Questions Preview */}
+                        <div className="mb-6">
+                            <h4 className="text-sm font-bold text-gray-700 mb-2">Selected Questions ({selectedQuestions.length})</h4>
+                            {selectedQuestions.length === 0 ? (
+                                <p className="text-xs text-gray-400 italic">No questions added yet.</p>
+                            ) : (
+                                <div className="space-y-2 max-h-40 overflow-y-auto bg-blue-50 p-2 rounded border border-blue-100">
+                                    {selectedQuestions.map((q, idx) => (
+                                        <div key={idx} className="flex justify-between items-center text-xs text-blue-900 bg-white p-2 rounded border border-blue-200">
+                                            <span className="truncate flex-1">{idx + 1}. {q.questionText}</span>
+                                            <button onClick={() => handleRemoveQuestionFromExam(idx)} className="text-red-500 hover:text-red-700 ml-2"><Trash2 size={12} /></button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        <button 
+                            onClick={handleCreateExam}
+                            className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                        >
+                            <CheckSquare size={18} /> Publish Test Series
+                        </button>
+                    </div>
+
+                    {/* Existing Exams List */}
+                    <div className="lg:col-span-2 space-y-4">
+                        <h3 className="text-lg font-bold text-gray-800">Active Custom Tests</h3>
+                        {customExams.length === 0 ? (
+                            <p className="text-gray-500 italic text-sm">No custom tests created.</p>
+                        ) : (
+                            customExams.map(exam => (
+                                <div key={exam.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <h4 className="font-bold text-gray-800">{exam.title}</h4>
+                                            <p className="text-xs text-gray-500 mt-1">{exam.totalMarks} Marks • {exam.durationMinutes} Mins</p>
+                                            <div className="flex gap-1 mt-2">
+                                                {exam.sections.map(s => (
+                                                    <span key={s.subject} className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{s.subject}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <button onClick={() => handleDeleteExam(exam.id)} className="text-red-400 hover:text-red-600 p-1">
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* --- COMMUNICATION TAB --- */}
+            {activeTab === 'communication' && (
+                <div className="max-w-2xl mx-auto bg-white rounded-xl shadow border border-gray-200 p-8 animate-in fade-in">
+                    <div className="flex items-center gap-3 mb-6 border-b pb-4">
+                        <div className="bg-blue-100 p-3 rounded-full text-blue-600">
+                            <Mail size={24} />
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-bold text-gray-800">Email Broadcast</h3>
+                            <p className="text-sm text-gray-500">Send announcements to all registered students and parents.</p>
+                        </div>
+                    </div>
+
+                    <form onSubmit={handleSendBroadcast} className="space-y-6">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Subject Line</label>
+                            <input 
+                                type="text" 
+                                value={emailSubject}
+                                onChange={e => setEmailSubject(e.target.value)}
+                                placeholder="e.g., Important Exam Schedule Update"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bt-blue outline-none"
+                                required
+                            />
+                        </div>
+                        
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Message Body</label>
+                            <textarea 
+                                value={emailBody}
+                                onChange={e => setEmailBody(e.target.value)}
+                                rows={6}
+                                placeholder="Type your message here..."
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bt-blue outline-none resize-none"
+                                required
+                            />
+                        </div>
+
+                        <div className="bg-blue-50 p-4 rounded-lg flex items-center gap-3 text-sm text-blue-800">
+                            <Users size={16} />
+                            <span>This email will be sent to <strong>{users.filter(u => u.role !== 'admin').length}</strong> registered users.</span>
+                        </div>
+
+                        <button 
+                            type="submit" 
+                            disabled={sendingEmail}
+                            className="w-full bg-gray-900 hover:bg-black text-white font-bold py-3 rounded-lg shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-70"
+                        >
+                            {sendingEmail ? 'Sending...' : <><Send size={18} /> Send Broadcast</>}
+                        </button>
+                    </form>
                 </div>
             )}
 
