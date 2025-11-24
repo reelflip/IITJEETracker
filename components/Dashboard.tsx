@@ -10,9 +10,10 @@ import { ProfilePage } from './ProfilePage';
 import { AdminPanel } from './AdminPanel';
 import { PerformanceAnalytics } from './PerformanceAnalytics'; 
 import { MockExamInterface } from './MockExamInterface'; 
-import { NoticeBoard } from './NoticeBoard'; // Import NoticeBoard
+import { NoticeBoard } from './NoticeBoard'; 
 import { LayoutDashboard, Table2, BrainCircuit, Search, Menu, X, BookCheck, LogOut, UserCircle, CalendarClock, ShieldCheck, BarChart2, FileText, Baby, Link as LinkIcon, Timer, Save, CheckCircle } from 'lucide-react';
 import { authService } from '../services/authService';
+import { Logo } from './Logo'; // Import Logo
 
 interface DashboardProps {
   userId: string; 
@@ -152,7 +153,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
       const match = displayTargetYear.match(/20\d{2}/);
       if (!match) return null;
       const year = parseInt(match[0]);
-      // Target Date: Jan 24th of the target year (Tentative JEE Mains Start)
       const targetDate = new Date(year, 0, 24); 
       const today = new Date();
       const diffTime = targetDate.getTime() - today.getTime();
@@ -179,12 +179,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
     if (userRole === 'student') {
         localStorage.setItem(progressKey, JSON.stringify(progress));
         localStorage.setItem(practiceKey, JSON.stringify(practiceStats));
-        // Timetable is saved explicitly via handler
     }
   }, [progress, practiceStats, progressKey, practiceKey, userRole]);
 
   const handleProgressUpdate = (id: string, updates: Partial<TopicProgress>) => {
-    // Parents cannot update
     if (userRole === 'parent') return;
     
     setProgress(prev => ({
@@ -192,19 +190,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
       [id]: { ...prev[id], ...updates }
     }));
     
-    // Reset save status on change to encourage saving
     if (saveStatus === 'saved') setSaveStatus('idle');
   };
 
   const handleManualSave = () => {
       setSaveStatus('saving');
-      // Force save to localStorage (redundant with useEffect but ensures immediate sync for user confidence)
       localStorage.setItem(progressKey, JSON.stringify(progress));
-      
-      // Simulate network delay for UX
       setTimeout(() => {
           setSaveStatus('saved');
-          // Reset to idle after 2 seconds
           setTimeout(() => setSaveStatus('idle'), 2000);
       }, 500);
   };
@@ -258,18 +251,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
       <nav className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
+            
+            {/* Logo Section */}
             <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab(userRole === 'admin' ? 'admin' : (userRole === 'parent' ? 'profile' : 'syllabus'))}>
-              <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-md ${userRole === 'admin' ? 'bg-gray-800' : 'bg-bt-blue'}`}>
-                {userRole === 'admin' ? 'AD' : coachingInitials}
-              </div>
-              <div className="flex flex-col justify-center">
-                <span className="text-lg font-bold text-gray-900 tracking-tight leading-none hidden sm:block">
-                  JEE PrepTracker
-                </span>
-                <span className="text-[10px] text-gray-500 font-medium uppercase tracking-wider hidden sm:block">
-                  {userRole === 'admin' ? 'Admin Console' : (userRole === 'parent' ? 'Parent View' : `${userCoaching} Edition`)}
-                </span>
-              </div>
+              <Logo variant="compact" />
+              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider border-l pl-2 border-gray-300 hidden sm:block">
+                  {userRole === 'admin' ? 'Admin Console' : (userRole === 'parent' ? 'Parent View' : `${userCoaching}`)}
+              </span>
             </div>
 
             {/* Desktop Nav */}
@@ -372,7 +360,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
         {mobileMenuOpen && (
           <div className="md:hidden bg-white border-b border-gray-200">
             <div className="px-2 pt-2 pb-3 space-y-1">
-                {/* Simplified Mobile Menu logic similar to desktop */}
                 <button onClick={() => { setActiveTab('syllabus'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2">Syllabus</button>
                 <button onClick={() => { setActiveTab('profile'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2">Profile</button>
                 <button onClick={onLogout} className="block w-full text-left px-3 py-2 text-red-600">Logout</button>

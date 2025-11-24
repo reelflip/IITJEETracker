@@ -1,8 +1,9 @@
 
 import React, { useState } from 'react';
-import { LogIn, GraduationCap, User as UserIcon, ArrowRight, Lock, Mail, Building2, Calendar, AlertTriangle, KeyRound, HelpCircle, Users } from 'lucide-react';
+import { LogIn, User as UserIcon, ArrowRight, Lock, Mail, Building2, Calendar, KeyRound, HelpCircle } from 'lucide-react';
 import { authService } from '../services/authService';
 import { User, COACHING_INSTITUTES, SECURITY_QUESTIONS } from '../types';
+import { Logo } from './Logo';
 
 interface LoginPageProps {
   onLogin: (user: User) => void;
@@ -116,13 +117,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-        {/* Header */}
-        <div className="bg-bt-blue p-8 text-center">
-          <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
-            <GraduationCap className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-2xl font-bold text-white mb-2">JEE PrepTracker</h1>
-          <p className="text-blue-100 text-sm">Your personal path to IIT success</p>
+        {/* Header with New Logo */}
+        <div className="bg-white p-8 pb-4 text-center border-b border-gray-50">
+          <Logo />
         </div>
 
         <div className="p-8">
