@@ -1,12 +1,23 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { generateWeeklyTimetable } from '../services/geminiService';
-import { CalendarClock, Loader2, Save, School, Moon, BookOpen, Clock, AlertCircle } from 'lucide-react';
+import { CalendarClock, Loader2, Save, School, Moon, BookOpen, Clock, AlertCircle, RotateCcw } from 'lucide-react';
 import { WeeklySchedule } from '../types';
 
-export const TimetableGenerator: React.FC = () => {
+interface TimetableGeneratorProps {
+    savedSchedule: WeeklySchedule | null;
+    onSave: (schedule: WeeklySchedule | null) => void;
+    readOnly?: boolean;
+}
+
+export const TimetableGenerator: React.FC<TimetableGeneratorProps> = ({ savedSchedule, onSave, readOnly = false }) => {
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<WeeklySchedule | null>(null);
+  const [result, setResult] = useState<WeeklySchedule | null>(savedSchedule);
+  const topRef = useRef<HTMLDivElement>(null);
+
+  // Update internal state if props change (e.g. loading from LS)
+  useEffect(() => {
+      setResult(savedSchedule);
+  }, [savedSchedule]);
 
   // Form State
   const [coachingDays, setCoachingDays] = useState<string[]>(['Mon', 'Wed', 'Fri']);
@@ -40,28 +51,49 @@ export const TimetableGenerator: React.FC = () => {
       sleepSchedule: { wake: wakeTime, bed: bedTime }
     });
     setResult(timetable);
+    onSave(timetable); // Persist
     setLoading(false);
   };
 
-  return (
-    <div className="max-w-7xl mx-auto grid grid-cols-1 xl:grid-cols-4 gap-8">
-      {/* Configuration Panel */}
-      <div className="xl:col-span-1 space-y-6">
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden sticky top-24">
+  const handleReset = () => {
+      if(window.confirm("Are you sure you want to regenerate? This will delete the current timetable and open the generator.")) {
+          setResult(null);
+          onSave(null);
+          // Scroll to top so user sees the form immediately
+          setTimeout(() => {
+              topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 100);
+      }
+  };
+
+  // --- PARENT VIEW: NO SCHEDULE ---
+  if (readOnly && !result) {
+      return (
+          <div className="max-w-4xl mx-auto bg-white border border-gray-200 rounded-xl p-12 text-center shadow-sm">
+             <CalendarClock className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+             <h2 className="text-xl font-bold text-gray-800">Timetable Not Generated</h2>
+             <p className="text-gray-500 mt-2">The student has not generated a weekly study schedule yet.</p>
+          </div>
+      );
+  }
+
+  // --- STUDENT VIEW: FORM (If no result) ---
+  if (!readOnly && !result) {
+    return (
+        <div ref={topRef} className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="bg-gradient-to-r from-orange-500 to-red-500 p-6 text-white">
              <div className="flex items-center gap-2 mb-2">
                 <CalendarClock className="w-6 h-6 text-white" />
-                <h2 className="text-xl font-bold">Timetable Config</h2>
+                <h2 className="text-xl font-bold">Timetable Generator</h2>
              </div>
              <p className="text-orange-50 text-sm">Define your fixed commitments to find your study slots.</p>
           </div>
 
-          <div className="p-6 space-y-6">
-            
+          <div className="p-8 space-y-8">
             {/* Coaching Section */}
             <div>
-              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                <BookOpen size={14} /> Coaching Schedule
+              <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                <BookOpen size={16} /> Coaching Schedule
               </h3>
               <div className="flex flex-wrap gap-2 mb-4">
                 {daysOfWeek.map(day => (
@@ -78,7 +110,7 @@ export const TimetableGenerator: React.FC = () => {
                   </button>
                 ))}
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-6">
                 <div>
                   <label className="text-xs text-gray-500 mb-1 block">Start Time</label>
                   <input type="time" value={coachingStart} onChange={e => setCoachingStart(e.target.value)} className="w-full text-sm border p-2 rounded" />
@@ -95,8 +127,8 @@ export const TimetableGenerator: React.FC = () => {
             {/* School Section */}
             <div>
               <div className="flex justify-between items-center mb-3">
-                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
-                  <School size={14} /> School / College
+                <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
+                  <School size={16} /> School / College
                 </h3>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" checked={attendsSchool} onChange={e => setAttendsSchool(e.target.checked)} className="sr-only peer" />
@@ -104,8 +136,8 @@ export const TimetableGenerator: React.FC = () => {
                 </label>
               </div>
               
-              <div className={`transition-all duration-300 ${attendsSchool ? 'opacity-100 max-h-40' : 'opacity-50 max-h-40 pointer-events-none grayscale'}`}>
-                 <div className="grid grid-cols-2 gap-3">
+              <div className={`transition-all duration-300 ${attendsSchool ? 'opacity-100' : 'opacity-50 pointer-events-none grayscale'}`}>
+                 <div className="grid grid-cols-2 gap-6">
                     <div>
                       <label className="text-xs text-gray-500 mb-1 block">Starts</label>
                       <input type="time" value={schoolStart} onChange={e => setSchoolStart(e.target.value)} className="w-full text-sm border p-2 rounded" />
@@ -123,10 +155,10 @@ export const TimetableGenerator: React.FC = () => {
 
             {/* Sleep Section */}
             <div>
-              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                <Moon size={14} /> Sleep Cycle
+              <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                <Moon size={16} /> Sleep Cycle
               </h3>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-6">
                 <div>
                    <label className="text-xs text-gray-500 mb-1 block">Wake Up</label>
                    <input type="time" value={wakeTime} onChange={e => setWakeTime(e.target.value)} className="w-full text-sm border p-2 rounded" />
@@ -141,129 +173,129 @@ export const TimetableGenerator: React.FC = () => {
             <button
               onClick={handleGenerate}
               disabled={loading}
-              className="w-full bg-gray-900 hover:bg-black text-white font-semibold py-3 rounded-lg shadow-md transition-all flex items-center justify-center gap-2 mt-4"
+              className="w-full bg-gray-900 hover:bg-black text-white font-semibold py-4 rounded-lg shadow-md transition-all flex items-center justify-center gap-2 text-lg"
             >
               {loading ? <Loader2 className="animate-spin" /> : <Clock />}
               Generate Timetable
             </button>
           </div>
         </div>
-      </div>
+    );
+  }
 
-      {/* Result Panel */}
-      <div className="xl:col-span-3 print:col-span-4">
-        {result ? (
-           <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 min-h-[600px] animate-in fade-in slide-in-from-right-4 duration-500 flex flex-col">
-             <div className="flex flex-col md:flex-row justify-between md:items-center border-b pb-4 mb-6 gap-4 print:hidden">
-                <div>
-                  <h3 className="text-2xl font-bold text-gray-800">Weekly Schedule</h3>
-                  <p className="text-sm text-gray-500 mt-1">{result.summary}</p>
-                </div>
+  // --- VIEW RESULT (Shared for Parent/Student) ---
+  if (result) {
+    return (
+       <div ref={topRef} className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 min-h-[600px] animate-in fade-in slide-in-from-right-4 duration-500 flex flex-col">
+         <div className="flex flex-col md:flex-row justify-between md:items-center border-b pb-4 mb-6 gap-4 print:hidden">
+            <div>
+              <h3 className="text-2xl font-bold text-gray-800">Weekly Schedule</h3>
+              <p className="text-sm text-gray-500 mt-1">{result.summary}</p>
+            </div>
+            <div className="flex gap-2">
+                {!readOnly && (
+                    <button onClick={handleReset} className="text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium border border-transparent hover:border-red-200">
+                        <RotateCcw size={16} /> Regenerate
+                    </button>
+                )}
                 <button onClick={() => window.print()} className="text-gray-500 hover:text-bt-blue flex items-center gap-2 text-sm font-medium border px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
-                   <Save size={16} /> Print / Save PDF
+                   <Save size={16} /> Print / PDF
                 </button>
-             </div>
-             
-             {/* Printable Header */}
-             <div className="hidden print:block mb-6">
-                <h1 className="text-3xl font-bold text-gray-900">JEE Preparation Timetable</h1>
-                <p className="text-gray-600">{result.summary}</p>
-             </div>
+            </div>
+         </div>
+         
+         {/* Printable Header */}
+         <div className="hidden print:block mb-6">
+            <h1 className="text-3xl font-bold text-gray-900">JEE Preparation Timetable</h1>
+            <p className="text-gray-600">{result.summary}</p>
+         </div>
 
-             <div className="flex-1 overflow-x-auto pb-4">
-                {/* Timetable Table */}
-                <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg overflow-hidden">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-32 border-r print:w-24">Day</th>
-                      <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Timeline</th>
-                      <th scope="col" className="px-6 py-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-32 border-l print:w-24">Effort</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {result.schedule.map((day, idx) => (
-                      <tr key={idx} className={`hover:bg-gray-50 transition-colors break-inside-avoid ${
-                        day.type === 'coaching' ? 'bg-blue-50/20' : 
-                        day.type === 'exam' ? 'bg-orange-50/20' : ''
-                      }`}>
-                        <td className="px-6 py-5 whitespace-nowrap border-r align-top bg-gray-50/30">
-                          <div className="flex flex-col">
-                            <span className="text-lg font-bold text-gray-900">{day.day}</span>
-                            {day.type === 'coaching' && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-blue-100 text-blue-800 mt-1 w-fit print:border print:border-blue-200">
-                                Class
-                              </span>
-                            )}
-                            {day.type === 'exam' && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-orange-100 text-orange-800 mt-1 w-fit print:border print:border-orange-200">
-                                Test
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 align-top">
-                          <ul className="space-y-3">
-                             {day.activities.map((act, i) => {
-                               // Heuristic for styling: bold time ranges
-                               const [time, desc] = act.split(': ');
-                               const isBold = desc?.includes('**');
-                               const cleanDesc = desc?.replace(/\*\*/g, '');
-                               const isCoachingActivity = cleanDesc?.includes('Coaching');
-                               const isSchoolActivity = cleanDesc?.includes('School');
+         <div className="flex-1 overflow-x-auto pb-4">
+            <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg overflow-hidden">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-32 border-r print:w-24">Day</th>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Timeline</th>
+                  <th scope="col" className="px-6 py-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-32 border-l print:w-24">Effort</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {result.schedule.map((day, idx) => (
+                  <tr key={idx} className={`hover:bg-gray-50 transition-colors break-inside-avoid ${
+                    day.type === 'coaching' ? 'bg-blue-50/20' : 
+                    day.type === 'exam' ? 'bg-orange-50/20' : ''
+                  }`}>
+                    <td className="px-6 py-5 whitespace-nowrap border-r align-top bg-gray-50/30">
+                      <div className="flex flex-col">
+                        <span className="text-lg font-bold text-gray-900">{day.day}</span>
+                        {day.type === 'coaching' && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-blue-100 text-blue-800 mt-1 w-fit print:border print:border-blue-200">
+                            Class
+                          </span>
+                        )}
+                        {day.type === 'exam' && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-orange-100 text-orange-800 mt-1 w-fit print:border print:border-orange-200">
+                            Test
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 align-top">
+                      <ul className="space-y-3">
+                         {day.activities.map((act, i) => {
+                           const [time, desc] = act.split(': ');
+                           const isBold = desc?.includes('**');
+                           const cleanDesc = desc?.replace(/\*\*/g, '');
+                           const isCoachingActivity = cleanDesc?.includes('Coaching');
+                           const isSchoolActivity = cleanDesc?.includes('School');
 
-                               return (
-                                 <li key={i} className={`text-sm flex items-start gap-3 ${
-                                    isCoachingActivity ? 'text-blue-800 bg-blue-50 p-1 rounded -ml-1' :
-                                    isSchoolActivity ? 'text-gray-500 italic' : 'text-gray-700'
-                                 }`}>
-                                   <span className="font-mono font-medium text-xs text-gray-500 mt-0.5 min-w-[90px]">{time}</span>
-                                   <span className={`${isBold ? 'font-bold text-gray-900' : ''}`}>{cleanDesc}</span>
-                                 </li>
-                               );
-                             })}
-                          </ul>
-                        </td>
-                        <td className="px-6 py-5 whitespace-nowrap text-center align-top border-l bg-gray-50/30">
-                           {day.hours > 0 ? (
-                             <div className="flex flex-col items-center justify-center">
-                               <span className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 font-bold text-sm border border-emerald-200 mb-1 print:border-gray-300">
-                                 {day.hours}h
-                               </span>
-                               <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Self Study</span>
-                             </div>
-                           ) : (
-                             <span className="text-gray-300">-</span>
-                           )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-             </div>
+                           return (
+                             <li key={i} className={`text-sm flex items-start gap-3 ${
+                                isCoachingActivity ? 'text-blue-800 bg-blue-50 p-1 rounded -ml-1' :
+                                isSchoolActivity ? 'text-gray-500 italic' : 'text-gray-700'
+                             }`}>
+                               <span className="font-mono font-medium text-xs text-gray-500 mt-0.5 min-w-[90px]">{time}</span>
+                               <span className={`${isBold ? 'font-bold text-gray-900' : ''}`}>{cleanDesc}</span>
+                             </li>
+                           );
+                         })}
+                      </ul>
+                    </td>
+                    <td className="px-6 py-5 whitespace-nowrap text-center align-top border-l bg-gray-50/30">
+                       {day.hours > 0 ? (
+                         <div className="flex flex-col items-center justify-center">
+                           <span className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 font-bold text-sm border border-emerald-200 mb-1 print:border-gray-300">
+                             {day.hours}h
+                           </span>
+                           <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Self Study</span>
+                         </div>
+                       ) : (
+                         <span className="text-gray-300">-</span>
+                       )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+         </div>
 
-             {/* Guidelines */}
-             <div className="mt-8 bg-blue-50/50 rounded-lg p-6 border border-blue-100 break-inside-avoid">
-                <h4 className="text-sm font-bold text-blue-800 flex items-center gap-2 mb-3">
-                  <AlertCircle size={16} className="text-blue-500" /> Success Guidelines
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
-                  {result.guidelines.map((guide, i) => (
-                    <div key={i} className="flex items-start gap-2 text-sm text-gray-700">
-                      <span className="text-bt-blue font-bold mt-1">•</span>
-                      <span>{guide}</span>
-                    </div>
-                  ))}
+         {/* Guidelines */}
+         <div className="mt-8 bg-blue-50/50 rounded-lg p-6 border border-blue-100 break-inside-avoid">
+            <h4 className="text-sm font-bold text-blue-800 flex items-center gap-2 mb-3">
+              <AlertCircle size={16} className="text-blue-500" /> Success Guidelines
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
+              {result.guidelines.map((guide, i) => (
+                <div key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                  <span className="text-bt-blue font-bold mt-1">•</span>
+                  <span>{guide}</span>
                 </div>
-             </div>
-           </div>
-        ) : (
-          <div className="bg-slate-50 border-2 border-dashed border-gray-300 rounded-xl h-full min-h-[400px] flex flex-col items-center justify-center text-gray-400 p-8 text-center">
-            <CalendarClock size={64} className="mb-4 opacity-20" />
-            <h3 className="text-lg font-semibold text-gray-500">No Timetable Generated Yet</h3>
-            <p className="max-w-xs mt-2 text-sm">Configure your coaching days and school hours on the left, then click "Generate Timetable" to see your optimal study routine.</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+              ))}
+            </div>
+         </div>
+       </div>
+    );
+  }
+
+  return null;
 };

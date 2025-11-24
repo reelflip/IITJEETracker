@@ -1,13 +1,14 @@
 
 import React, { useState } from 'react';
 import { Topic, TopicProgress, Status, Subject, ExerciseProgress } from '../types';
-import { ChevronDown, ChevronUp, CheckCircle, Circle, BookOpen, PenTool } from 'lucide-react';
+import { ChevronDown, ChevronUp, CheckCircle, Circle, BookOpen, PenTool, Lock } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 interface TopicRowProps {
   topic: Topic;
   progress: TopicProgress;
   onUpdate: (id: string, updates: Partial<TopicProgress>) => void;
+  readOnly?: boolean; // New Prop
 }
 
 const statusColors = {
@@ -23,7 +24,7 @@ const subjectColors = {
   [Subject.MATHS]: 'text-orange-600 bg-orange-100',
 };
 
-export const TopicRow: React.FC<TopicRowProps> = ({ topic, progress, onUpdate }) => {
+export const TopicRow: React.FC<TopicRowProps> = ({ topic, progress, onUpdate, readOnly = false }) => {
   const [expanded, setExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<'exercises' | 'theory'>('exercises');
 
@@ -42,6 +43,7 @@ export const TopicRow: React.FC<TopicRowProps> = ({ topic, progress, onUpdate })
   const percentComplete = totalQuestions > 0 ? Math.round((totalCompleted / totalQuestions) * 100) : 0;
 
   const handleExerciseUpdate = (index: number, field: 'completed' | 'total', value: number) => {
+    if (readOnly) return;
     const newExercises = [...safeExercises] as [ExerciseProgress, ExerciseProgress, ExerciseProgress, ExerciseProgress];
     
     // Validate inputs
@@ -91,7 +93,8 @@ export const TopicRow: React.FC<TopicRowProps> = ({ topic, progress, onUpdate })
           <select 
             value={progress.status}
             onChange={(e) => onUpdate(topic.id, { status: e.target.value as Status })}
-            className={`px-3 py-1.5 rounded-md text-sm font-medium border focus:ring-2 focus:ring-offset-1 focus:ring-bt-blue outline-none cursor-pointer ${statusColors[progress.status]}`}
+            disabled={readOnly}
+            className={`px-3 py-1.5 rounded-md text-sm font-medium border focus:ring-2 focus:ring-offset-1 focus:ring-bt-blue outline-none cursor-pointer ${statusColors[progress.status]} ${readOnly ? 'opacity-70 cursor-not-allowed' : ''}`}
           >
             {Object.values(Status).map((s) => (
               <option key={s} value={s}>{s}</option>
@@ -138,7 +141,10 @@ export const TopicRow: React.FC<TopicRowProps> = ({ topic, progress, onUpdate })
            <div className="p-4">
              {activeTab === 'exercises' ? (
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Chapter Exercises</h4>
+                  <div className="flex justify-between items-center mb-3">
+                     <h4 className="text-sm font-semibold text-gray-700">Chapter Exercises</h4>
+                     {readOnly && <span className="text-xs text-orange-600 font-bold flex items-center gap-1"><Lock size={12}/> View Only Mode</span>}
+                  </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                       {safeExercises.map((ex, idx) => (
                         <div key={idx} className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
@@ -159,7 +165,8 @@ export const TopicRow: React.FC<TopicRowProps> = ({ topic, progress, onUpdate })
                                   min={0}
                                   value={ex.completed}
                                   onChange={(e) => handleExerciseUpdate(idx, 'completed', parseInt(e.target.value) || 0)}
-                                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-bt-blue focus:border-bt-blue outline-none"
+                                  disabled={readOnly}
+                                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-bt-blue focus:border-bt-blue outline-none disabled:bg-gray-100"
                                 />
                             </div>
                             <span className="text-gray-400 mt-4">/</span>
@@ -170,7 +177,8 @@ export const TopicRow: React.FC<TopicRowProps> = ({ topic, progress, onUpdate })
                                   min={1}
                                   value={ex.total}
                                   onChange={(e) => handleExerciseUpdate(idx, 'total', parseInt(e.target.value) || 0)}
-                                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-bt-blue focus:border-bt-blue outline-none"
+                                  disabled={readOnly}
+                                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-bt-blue focus:border-bt-blue outline-none disabled:bg-gray-100"
                                 />
                             </div>
                           </div>

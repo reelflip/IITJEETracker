@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { LogIn, GraduationCap, User as UserIcon, ArrowRight, Lock, Mail, Building2, Calendar, AlertTriangle, KeyRound, HelpCircle } from 'lucide-react';
+import { LogIn, GraduationCap, User as UserIcon, ArrowRight, Lock, Mail, Building2, Calendar, AlertTriangle, KeyRound, HelpCircle, Users } from 'lucide-react';
 import { authService } from '../services/authService';
 import { User, COACHING_INSTITUTES, SECURITY_QUESTIONS } from '../types';
 
@@ -16,6 +16,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const years = [currentYear, currentYear + 1, currentYear + 2, currentYear + 3].map(y => `IIT JEE ${y}`);
 
   // Form State
+  const [role, setRole] = useState<'student' | 'parent'>('student');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -52,7 +53,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
 
     setTimeout(() => {
       if (view === 'signup') {
-        const result = authService.register(name, email, password, coaching, targetYear, securityQuestion, securityAnswer);
+        const result = authService.register(name, email, password, coaching, targetYear, securityQuestion, securityAnswer, role);
         if (result.success && result.user) {
           onLogin(result.user);
         } else {
@@ -162,6 +163,26 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
               </div>
             )}
 
+            {/* Role Switcher for SignUp */}
+            {view === 'signup' && (
+                <div className="flex bg-gray-100 p-1 rounded-lg mb-4">
+                    <button
+                        type="button"
+                        onClick={() => setRole('student')}
+                        className={`flex-1 py-2 text-sm font-semibold rounded-md transition-all ${role === 'student' ? 'bg-white shadow text-bt-blue' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                        I am a Student
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setRole('parent')}
+                        className={`flex-1 py-2 text-sm font-semibold rounded-md transition-all ${role === 'parent' ? 'bg-white shadow text-bt-blue' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                        I am a Parent
+                    </button>
+                </div>
+            )}
+
             {view === 'signup' && (
               <>
                 <div className="space-y-1">
@@ -173,44 +194,46 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                       required
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="John Doe"
+                      placeholder={role === 'parent' ? "Parent Name" : "Student Name"}
                       className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bt-blue focus:border-bt-blue outline-none"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-gray-500 uppercase">Institute</label>
-                    <div className="relative">
-                      <Building2 className="absolute left-2 top-2.5 w-4 h-4 text-gray-400" />
-                      <select
-                        value={coaching}
-                        onChange={(e) => setCoaching(e.target.value)}
-                        className="w-full pl-8 pr-2 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-bt-blue focus:border-bt-blue outline-none bg-white appearance-none text-ellipsis overflow-hidden"
-                      >
-                        {COACHING_INSTITUTES.map((inst) => (
-                          <option key={inst} value={inst}>{inst.split(' ')[0]}</option>
-                        ))}
-                      </select>
+                {role === 'student' && (
+                    <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                        <label className="text-xs font-semibold text-gray-500 uppercase">Institute</label>
+                        <div className="relative">
+                        <Building2 className="absolute left-2 top-2.5 w-4 h-4 text-gray-400" />
+                        <select
+                            value={coaching}
+                            onChange={(e) => setCoaching(e.target.value)}
+                            className="w-full pl-8 pr-2 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-bt-blue focus:border-bt-blue outline-none bg-white appearance-none text-ellipsis overflow-hidden"
+                        >
+                            {COACHING_INSTITUTES.map((inst) => (
+                            <option key={inst} value={inst}>{inst.split(' ')[0]}</option>
+                            ))}
+                        </select>
+                        </div>
                     </div>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-gray-500 uppercase">Target Year</label>
-                    <div className="relative">
-                      <Calendar className="absolute left-2 top-2.5 w-4 h-4 text-gray-400" />
-                      <select
-                        value={targetYear}
-                        onChange={(e) => setTargetYear(e.target.value)}
-                        className="w-full pl-8 pr-2 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-bt-blue focus:border-bt-blue outline-none bg-white appearance-none"
-                      >
-                        {years.map((y) => (
-                          <option key={y} value={y}>{y}</option>
-                        ))}
-                      </select>
+                    <div className="space-y-1">
+                        <label className="text-xs font-semibold text-gray-500 uppercase">Target Year</label>
+                        <div className="relative">
+                        <Calendar className="absolute left-2 top-2.5 w-4 h-4 text-gray-400" />
+                        <select
+                            value={targetYear}
+                            onChange={(e) => setTargetYear(e.target.value)}
+                            className="w-full pl-8 pr-2 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-bt-blue focus:border-bt-blue outline-none bg-white appearance-none"
+                        >
+                            {years.map((y) => (
+                            <option key={y} value={y}>{y}</option>
+                            ))}
+                        </select>
+                        </div>
                     </div>
-                  </div>
-                </div>
+                    </div>
+                )}
               </>
             )}
 
@@ -225,7 +248,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="student@example.com"
+                    placeholder={role === 'parent' ? "parent@example.com" : "student@example.com"}
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bt-blue focus:border-bt-blue outline-none"
                     />
                 </div>
@@ -349,7 +372,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
               className="w-full bg-bt-blue hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2 mt-4 shadow-sm"
             >
               {loading ? 'Processing...' : (
-                  view === 'signup' ? 'Create Account' : 
+                  view === 'signup' ? (role === 'parent' ? 'Create Parent Account' : 'Create Student Account') : 
                   view === 'forgot' ? (forgotStep === 1 ? 'Find Account' : 'Reset Password') : 
                   'Sign In'
               )} 

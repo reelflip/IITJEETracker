@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { SYLLABUS_DATA, INITIAL_PROGRESS } from '../constants';
-import { TopicProgress, Subject, Status, TopicPracticeStats } from '../types';
+import { TopicProgress, Subject, Status, TopicPracticeStats, User, WeeklySchedule } from '../types';
 import { TopicRow } from './TopicRow';
 import { AIPlanner } from './AIPlanner';
 import { QuestionBank } from './QuestionBank';
@@ -9,31 +9,78 @@ import { TimetableGenerator } from './TimetableGenerator';
 import { ProfilePage } from './ProfilePage';
 import { AdminPanel } from './AdminPanel';
 import { PerformanceAnalytics } from './PerformanceAnalytics'; 
-import { MockExamInterface } from './MockExamInterface'; // Import New Component
-import { LayoutDashboard, Table2, BrainCircuit, Search, Menu, X, BookCheck, LogOut, UserCircle, CalendarClock, ShieldCheck, BarChart2, FileText } from 'lucide-react';
+import { MockExamInterface } from './MockExamInterface'; 
+import { LayoutDashboard, Table2, BrainCircuit, Search, Menu, X, BookCheck, LogOut, UserCircle, CalendarClock, ShieldCheck, BarChart2, FileText, Baby, Link as LinkIcon } from 'lucide-react';
+import { authService } from '../services/authService';
 
 interface DashboardProps {
   userId: string; 
   userName: string; 
   userCoaching?: string;
   userTargetYear?: string;
-  userRole?: 'admin' | 'student'; 
+  userRole?: 'admin' | 'student' | 'parent'; 
   onLogout: () => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoaching = "Bakliwal Tutorials", userTargetYear = "IIT JEE 2025", userRole = 'student', onLogout }) => {
-  // If admin, default to admin panel
   const [activeTab, setActiveTab] = useState<'syllabus' | 'analytics' | 'ai' | 'practice' | 'exams' | 'timetable' | 'profile' | 'admin'>(
-    userRole === 'admin' ? 'admin' : 'syllabus'
+    userRole === 'admin' ? 'admin' : (userRole === 'parent' ? 'profile' : 'syllabus')
   );
 
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [studentUser, setStudentUser] = useState<User | null>(null);
+  const [pendingRequestFrom, setPendingRequestFrom] = useState<User | null>(null);
+
+  // --- Determine who is the "Target" of the dashboard ---
+  // If Student: Target is Self
+  // If Parent: Target is Linked Student (if any)
+  // If Admin: Irrelevant (uses Admin Panel)
+  
+  const [progressKey, setProgressKey] = useState(`bt-jee-tracker-progress-${userId}`);
+  const [practiceKey, setPracticeKey] = useState(`bt-jee-tracker-practice-${userId}`);
+  const [timetableKey, setTimetableKey] = useState(`bt-jee-tracker-timetable-${userId}`);
+  
+  // Refresh logic to handle connection updates
+  const refreshSession = () => {
+    const session = authService.getSession();
+    if (session) {
+        setCurrentUser(session);
+        // If Parent, check for linked student
+        if (session.role === 'parent' && session.linkedUserId) {
+            const linkedStudent = authService.getLinkedUser(session.id);
+            if (linkedStudent) {
+                setStudentUser(linkedStudent);
+                // SWITCH DATA SOURCE TO STUDENT
+                setProgressKey(`bt-jee-tracker-progress-${linkedStudent.email}`);
+                setPracticeKey(`bt-jee-tracker-practice-${linkedStudent.email}`);
+                setTimetableKey(`bt-jee-tracker-timetable-${linkedStudent.email}`);
+            }
+        } 
+        // If Student, check for incoming requests
+        else if (session.role === 'student') {
+            if (session.connectionRequestFrom) {
+                const requestingParent = authService.getUsers().find(u => u.id === session.connectionRequestFrom);
+                if (requestingParent) setPendingRequestFrom(requestingParent);
+            } else {
+                setPendingRequestFrom(null);
+            }
+        }
+    }
+  };
+
+  useEffect(() => {
+    refreshSession();
+  }, [userId, activeTab]); 
+
   // --- Textbook Progress State ---
-  const [progress, setProgress] = useState<Record<string, TopicProgress>>(() => {
-    const storageKey = `bt-jee-tracker-progress-${userId}`;
+  const [progress, setProgress] = useState<Record<string, TopicProgress>>({});
+  
+  useEffect(() => {
     try {
-      const saved = localStorage.getItem(storageKey);
+      const saved = localStorage.getItem(progressKey);
       if (saved) {
         const parsed = JSON.parse(saved);
+        // Migration logic...
         const migrated: Record<string, TopicProgress> = {};
         Object.keys(parsed).forEach(key => {
            const item = parsed[key];
@@ -41,34 +88,47 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
               migrated[key] = {
                 ...item,
                 exercises: INITIAL_PROGRESS[key]?.exercises || [
-                  { completed: 0, total: 60 },
-                  { completed: 0, total: 50 },
-                  { completed: 0, total: 40 },
-                  { completed: 0, total: 20 }
+                  { completed: 0, total: 60 }, { completed: 0, total: 50 }, { completed: 0, total: 40 }, { completed: 0, total: 20 }
                 ]
               };
            } else {
              migrated[key] = item;
            }
         });
-        return { ...INITIAL_PROGRESS, ...migrated };
+        setProgress({ ...INITIAL_PROGRESS, ...migrated });
+      } else {
+          // If no data found for student, use initial
+          setProgress(INITIAL_PROGRESS);
       }
     } catch (error) {
       console.error("Failed to load progress:", error);
+      setProgress(INITIAL_PROGRESS);
     }
-    return INITIAL_PROGRESS;
-  });
+  }, [progressKey]); // Reload when key changes
 
   // --- Online Practice Stats State ---
-  const [practiceStats, setPracticeStats] = useState<Record<string, TopicPracticeStats>>(() => {
-    const storageKey = `bt-jee-tracker-practice-${userId}`;
+  const [practiceStats, setPracticeStats] = useState<Record<string, TopicPracticeStats>>({});
+
+  useEffect(() => {
+      try {
+        const saved = localStorage.getItem(practiceKey);
+        setPracticeStats(saved ? JSON.parse(saved) : {});
+      } catch {
+        setPracticeStats({});
+      }
+  }, [practiceKey]);
+
+  // --- Timetable State ---
+  const [savedTimetable, setSavedTimetable] = useState<WeeklySchedule | null>(null);
+  
+  useEffect(() => {
     try {
-      const saved = localStorage.getItem(storageKey);
-      return saved ? JSON.parse(saved) : {};
+        const saved = localStorage.getItem(timetableKey);
+        setSavedTimetable(saved ? JSON.parse(saved) : null);
     } catch {
-      return {};
+        setSavedTimetable(null);
     }
-  });
+  }, [timetableKey]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSubject, setFilterSubject] = useState<Subject | 'All'>('All');
@@ -80,22 +140,27 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
   const completedTopics = progressValues.filter((p) => p.status === Status.COMPLETED || p.status === Status.REVISED).length;
   const completionPercentage = totalTopics > 0 ? Math.round((completedTopics / totalTopics) * 100) : 0;
 
-  const coachingInitials = userCoaching
+  const displayCoaching = studentUser ? (studentUser.coachingInstitute || "Unknown") : userCoaching;
+  const coachingInitials = displayCoaching
     .split(' ')
     .map(word => word[0])
     .join('')
     .substring(0, 2)
     .toUpperCase();
 
+  // Save changes ONLY if role is student
   useEffect(() => {
-    // Only save progress if student
     if (userRole === 'student') {
-        localStorage.setItem(`bt-jee-tracker-progress-${userId}`, JSON.stringify(progress));
-        localStorage.setItem(`bt-jee-tracker-practice-${userId}`, JSON.stringify(practiceStats));
+        localStorage.setItem(progressKey, JSON.stringify(progress));
+        localStorage.setItem(practiceKey, JSON.stringify(practiceStats));
+        // Timetable is saved explicitly via handler
     }
-  }, [progress, practiceStats, userId, userRole]);
+  }, [progress, practiceStats, progressKey, practiceKey, userRole]);
 
   const handleProgressUpdate = (id: string, updates: Partial<TopicProgress>) => {
+    // Parents cannot update
+    if (userRole === 'parent') return;
+    
     setProgress(prev => ({
       ...prev,
       [id]: { ...prev[id], ...updates }
@@ -103,7 +168,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
   };
 
   const handlePracticeUpdate = (topicName: string, isCorrect: boolean) => {
-    // Find Topic ID by Name
+    if (userRole === 'parent') return;
+
     const topic = SYLLABUS_DATA.find(t => t.name === topicName);
     if (!topic) return;
 
@@ -118,6 +184,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
         }
       };
     });
+  };
+
+  const handleTimetableSave = (schedule: WeeklySchedule | null) => {
+      if (userRole === 'parent') return;
+      
+      setSavedTimetable(schedule);
+      if (schedule) {
+          localStorage.setItem(timetableKey, JSON.stringify(schedule));
+      } else {
+          localStorage.removeItem(timetableKey);
+      }
   };
 
   const filteredTopics = SYLLABUS_DATA.filter(topic => {
@@ -139,7 +216,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
       <nav className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
-            <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab(userRole === 'admin' ? 'admin' : 'syllabus')}>
+            <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab(userRole === 'admin' ? 'admin' : (userRole === 'parent' ? 'profile' : 'syllabus'))}>
               <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-md ${userRole === 'admin' ? 'bg-gray-800' : 'bg-bt-blue'}`}>
                 {userRole === 'admin' ? 'AD' : coachingInitials}
               </div>
@@ -148,7 +225,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
                   JEE PrepTracker
                 </span>
                 <span className="text-[10px] text-gray-500 font-medium uppercase tracking-wider hidden sm:block">
-                  {userRole === 'admin' ? 'Admin Console' : `${userCoaching} Edition`}
+                  {userRole === 'admin' ? 'Admin Console' : (userRole === 'parent' ? 'Parent View' : `${userCoaching} Edition`)}
                 </span>
               </div>
             </div>
@@ -180,27 +257,34 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
                     <BarChart2 size={18} />
                     Analytics
                   </button>
-                  <button 
-                    onClick={() => setActiveTab('practice')}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${activeTab === 'practice' ? 'bg-teal-50 text-teal-700 font-medium' : 'text-gray-600 hover:text-gray-900'}`}
-                  >
-                    <BookCheck size={18} />
-                    Practice
-                  </button>
-                  <button 
-                    onClick={() => setActiveTab('exams')}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${activeTab === 'exams' ? 'bg-red-50 text-red-700 font-medium' : 'text-gray-600 hover:text-gray-900'}`}
-                  >
-                    <FileText size={18} />
-                    Mock Exams
-                  </button>
-                  <button 
-                    onClick={() => setActiveTab('ai')}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${activeTab === 'ai' ? 'bg-purple-50 text-purple-700 font-medium' : 'text-gray-600 hover:text-gray-900'}`}
-                  >
-                    <BrainCircuit size={18} />
-                    Planner
-                  </button>
+                  
+                  {/* Hide interactive tabs for parents */}
+                  {userRole !== 'parent' && (
+                      <>
+                        <button 
+                            onClick={() => setActiveTab('practice')}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${activeTab === 'practice' ? 'bg-teal-50 text-teal-700 font-medium' : 'text-gray-600 hover:text-gray-900'}`}
+                        >
+                            <BookCheck size={18} />
+                            Practice
+                        </button>
+                        <button 
+                            onClick={() => setActiveTab('exams')}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${activeTab === 'exams' ? 'bg-red-50 text-red-700 font-medium' : 'text-gray-600 hover:text-gray-900'}`}
+                        >
+                            <FileText size={18} />
+                            Mock Exams
+                        </button>
+                        <button 
+                            onClick={() => setActiveTab('ai')}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${activeTab === 'ai' ? 'bg-purple-50 text-purple-700 font-medium' : 'text-gray-600 hover:text-gray-900'}`}
+                        >
+                            <BrainCircuit size={18} />
+                            Planner
+                        </button>
+                      </>
+                  )}
+                  
                   <button 
                     onClick={() => setActiveTab('timetable')}
                     className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${activeTab === 'timetable' ? 'bg-orange-50 text-orange-700 font-medium' : 'text-gray-600 hover:text-gray-900'}`}
@@ -246,61 +330,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
         {mobileMenuOpen && (
           <div className="md:hidden bg-white border-b border-gray-200">
             <div className="px-2 pt-2 pb-3 space-y-1">
-              {userRole === 'admin' ? (
-                 <button 
-                    onClick={() => { setActiveTab('admin'); setMobileMenuOpen(false); }}
-                    className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                 >
-                    Admin Panel
-                 </button>
-              ) : (
-                <>
-                  <button 
-                    onClick={() => { setActiveTab('syllabus'); setMobileMenuOpen(false); }}
-                    className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                  >
-                    Syllabus
-                  </button>
-                  <button 
-                    onClick={() => { setActiveTab('analytics'); setMobileMenuOpen(false); }}
-                    className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                  >
-                    Analytics
-                  </button>
-                  <button 
-                    onClick={() => { setActiveTab('practice'); setMobileMenuOpen(false); }}
-                    className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                  >
-                    Practice Bank
-                  </button>
-                  <button 
-                    onClick={() => { setActiveTab('exams'); setMobileMenuOpen(false); }}
-                    className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                  >
-                    Mock Exams
-                  </button>
-                  <button 
-                    onClick={() => { setActiveTab('timetable'); setMobileMenuOpen(false); }}
-                    className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                  >
-                    Timetable
-                  </button>
-                </>
-              )}
-              <button 
-                onClick={() => { setActiveTab('profile'); setMobileMenuOpen(false); }}
-                className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-              >
-                Profile
-              </button>
-              <div className="border-t border-gray-100 my-2 pt-2">
-                <button 
-                  onClick={onLogout}
-                  className="w-full text-left px-3 py-2 flex items-center gap-2 text-red-600 font-medium"
-                >
-                  <LogOut size={16} /> Logout
-                </button>
-              </div>
+                {/* Simplified Mobile Menu logic similar to desktop */}
+                <button onClick={() => { setActiveTab('syllabus'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2">Syllabus</button>
+                <button onClick={() => { setActiveTab('profile'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2">Profile</button>
+                <button onClick={onLogout} className="block w-full text-left px-3 py-2 text-red-600">Logout</button>
             </div>
           </div>
         )}
@@ -313,111 +346,158 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
             <AdminPanel />
         ) : activeTab === 'syllabus' ? (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                    <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-gray-500 font-medium text-sm">Overall Progress</h3>
-                    <LayoutDashboard className="text-blue-500 w-5 h-5" />
-                    </div>
-                    <div className="flex items-end gap-3">
-                    <span className="text-3xl font-bold text-gray-900">{completionPercentage}%</span>
-                    <span className="text-sm text-gray-500 mb-1">completed</span>
-                    </div>
-                    <div className="w-full bg-gray-100 rounded-full h-2 mt-4">
-                    <div 
-                        className="bg-bt-blue h-2 rounded-full transition-all duration-500" 
-                        style={{ width: `${completionPercentage}%` }} 
-                    />
-                    </div>
-                </div>
-
-                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm md:col-span-2 flex flex-col justify-center">
-                    <h3 className="text-gray-800 font-semibold mb-2">Welcome Back, {userName}!</h3>
-                    <p className="text-gray-600 text-sm">
-                    Consistent effort is the key to cracking JEE with <strong>{userCoaching}</strong>. You have completed {completedTopics} out of {totalTopics} major topics. 
-                    </p>
-                </div>
-            </div>
-
-            <div className="flex flex-col md:flex-row gap-4 justify-between bg-white p-4 rounded-lg shadow-sm border border-gray-200 sticky top-20 z-40">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-2.5 text-gray-400 w-5 h-5" />
-                <input 
-                  type="text" 
-                  placeholder="Search topics..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bt-blue focus:border-transparent outline-none"
-                />
-              </div>
-              <div className="flex gap-2 overflow-x-auto pb-1 md:pb-0">
-                {(['All', Subject.PHYSICS, Subject.CHEMISTRY, Subject.MATHS] as const).map(subj => (
-                  <button
-                    key={subj}
-                    onClick={() => setFilterSubject(subj)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                      filterSubject === subj 
-                      ? 'bg-gray-900 text-white' 
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    {subj}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-8">
-              {Object.keys(groupedTopics).length === 0 ? (
-                <div className="text-center py-12 text-gray-500">
-                  <p>No topics found matching your filters.</p>
-                </div>
+            
+            {/* Parent View Header */}
+            {userRole === 'parent' && (
+              !studentUser ? (
+                 <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 text-center">
+                    <Baby className="mx-auto text-yellow-500 mb-2" size={32} />
+                    <h3 className="text-lg font-bold text-gray-800">No Student Connected</h3>
+                    <p className="text-gray-600 text-sm mb-4">You need to connect to a student account to view syllabus progress.</p>
+                    <button onClick={() => setActiveTab('profile')} className="text-bt-blue font-bold hover:underline">Go to Profile to Connect</button>
+                 </div>
               ) : (
-                Object.keys(groupedTopics).sort().map((phaseStr) => {
-                  const phase = Number(phaseStr);
-                  return (
-                    <div key={phase} className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-                      <div className="flex items-center gap-4 mb-4">
-                        <h2 className="text-xl font-bold text-gray-800">Phase {phase}</h2>
-                        <div className="h-px bg-gray-200 flex-1"></div>
-                      </div>
-                      <div className="space-y-3">
-                        {groupedTopics[phase].map(topic => (
-                          <TopicRow 
-                            key={topic.id}
-                            topic={topic}
-                            progress={progress[topic.id] || { 
-                              topicId: topic.id, 
-                              status: Status.NOT_STARTED, 
-                              exercises: [
-                                { completed: 0, total: 60 },
-                                { completed: 0, total: 50 },
-                                { completed: 0, total: 40 },
-                                { completed: 0, total: 20 }
-                              ]
-                            }}
-                            onUpdate={handleProgressUpdate}
-                          />
-                        ))}
-                      </div>
+                <div className="bg-blue-600 text-white p-4 rounded-xl shadow-md flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-white/20 p-2 rounded-full">
+                           <Baby />
+                        </div>
+                        <div>
+                            <h2 className="font-bold text-lg">Viewing Progress: {studentUser.name}</h2>
+                            <p className="text-blue-100 text-sm">Read-only Mode enabled.</p>
+                        </div>
                     </div>
-                  );
-                })
-              )}
-            </div>
+                </div>
+              )
+            )}
+
+            {(userRole !== 'parent' || studentUser) && (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                        <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-gray-500 font-medium text-sm">Overall Progress</h3>
+                        <LayoutDashboard className="text-blue-500 w-5 h-5" />
+                        </div>
+                        <div className="flex items-end gap-3">
+                        <span className="text-3xl font-bold text-gray-900">{completionPercentage}%</span>
+                        <span className="text-sm text-gray-500 mb-1">completed</span>
+                        </div>
+                        <div className="w-full bg-gray-100 rounded-full h-2 mt-4">
+                        <div 
+                            className="bg-bt-blue h-2 rounded-full transition-all duration-500" 
+                            style={{ width: `${completionPercentage}%` }} 
+                        />
+                        </div>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm md:col-span-2 flex flex-col justify-center">
+                        <h3 className="text-gray-800 font-semibold mb-2">
+                            {userRole === 'parent' ? `Student Overview: ${studentUser?.name}` : `Welcome Back, ${userName}!`}
+                        </h3>
+                        <p className="text-gray-600 text-sm">
+                        {userRole === 'parent' 
+                            ? `${studentUser?.name} has completed ${completedTopics} out of ${totalTopics} major topics at ${studentUser?.coachingInstitute}.`
+                            : `Consistent effort is the key to cracking JEE with ${userCoaching}. You have completed ${completedTopics} out of ${totalTopics} major topics.`
+                        }
+                        </p>
+                    </div>
+                </div>
+
+                <div className="flex flex-col md:flex-row gap-4 justify-between bg-white p-4 rounded-lg shadow-sm border border-gray-200 sticky top-20 z-40">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-2.5 text-gray-400 w-5 h-5" />
+                    <input 
+                      type="text" 
+                      placeholder="Search topics..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bt-blue focus:border-transparent outline-none"
+                    />
+                  </div>
+                  <div className="flex gap-2 overflow-x-auto pb-1 md:pb-0">
+                    {(['All', Subject.PHYSICS, Subject.CHEMISTRY, Subject.MATHS] as const).map(subj => (
+                      <button
+                        key={subj}
+                        onClick={() => setFilterSubject(subj)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                          filterSubject === subj 
+                          ? 'bg-gray-900 text-white' 
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        {subj}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-8">
+                  {Object.keys(groupedTopics).length === 0 ? (
+                    <div className="text-center py-12 text-gray-500">
+                      <p>No topics found matching your filters.</p>
+                    </div>
+                  ) : (
+                    Object.keys(groupedTopics).sort().map((phaseStr) => {
+                      const phase = Number(phaseStr);
+                      return (
+                        <div key={phase} className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                          <div className="flex items-center gap-4 mb-4">
+                            <h2 className="text-xl font-bold text-gray-800">Phase {phase}</h2>
+                            <div className="h-px bg-gray-200 flex-1"></div>
+                          </div>
+                          <div className="space-y-3">
+                            {groupedTopics[phase].map(topic => (
+                              <TopicRow 
+                                key={topic.id}
+                                topic={topic}
+                                progress={progress[topic.id] || { 
+                                  topicId: topic.id, 
+                                  status: Status.NOT_STARTED, 
+                                  exercises: [{ completed: 0, total: 60 }, { completed: 0, total: 50 }, { completed: 0, total: 40 }, { completed: 0, total: 20 }]
+                                }}
+                                onUpdate={handleProgressUpdate}
+                                readOnly={userRole === 'parent'} // Parents cannot edit
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </>
+            )}
           </div>
         ) : activeTab === 'analytics' ? (
-          <PerformanceAnalytics progress={progress} practiceStats={practiceStats} />
-        ) : activeTab === 'practice' ? (
+           userRole === 'parent' && !studentUser ? (
+             <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-8 text-center mt-8">
+                 <LinkIcon className="mx-auto text-yellow-500 mb-3" size={48} />
+                 <h3 className="text-xl font-bold text-gray-800">Connection Required</h3>
+                 <p className="text-gray-600 mb-6">Connect to a student account to view performance analytics.</p>
+                 <button onClick={() => setActiveTab('profile')} className="bg-bt-blue text-white px-6 py-2 rounded-lg font-bold">Go to Profile</button>
+             </div>
+           ) : (
+             <PerformanceAnalytics progress={progress} practiceStats={practiceStats} />
+           )
+        ) : activeTab === 'practice' && userRole === 'student' ? (
           <QuestionBank onResultUpdate={handlePracticeUpdate} />
-        ) : activeTab === 'exams' ? (
+        ) : activeTab === 'exams' && userRole === 'student' ? (
           <MockExamInterface />
-        ) : activeTab === 'ai' ? (
+        ) : activeTab === 'ai' && userRole === 'student' ? (
           <AIPlanner />
         ) : activeTab === 'timetable' ? (
-          <TimetableGenerator />
+          <TimetableGenerator 
+             savedSchedule={savedTimetable} 
+             onSave={handleTimetableSave}
+             readOnly={userRole === 'parent'}
+          />
         ) : (
-          <ProfilePage name={userName} email={userId} coaching={userCoaching} targetYear={userTargetYear} />
+          <ProfilePage 
+             user={currentUser || { id: userId, email: userId, name: userName, role: userRole } as User} 
+             linkedUser={studentUser} 
+             onConnectionUpdate={refreshSession} 
+          />
         )}
 
       </main>

@@ -25,9 +25,13 @@ export interface User {
   coachingInstitute?: string;
   targetYear?: string;
   passwordHash: string; 
-  role: 'admin' | 'student';
+  role: 'admin' | 'student' | 'parent'; // Added Parent Role
   securityQuestion?: string;
   securityAnswer?: string;
+  
+  // Connection Logic
+  linkedUserId?: string; // ID of the connected Student (for parent) or Parent (for student)
+  connectionRequestFrom?: string; // ID of the parent requesting connection
 }
 
 export const COACHING_INSTITUTES = [

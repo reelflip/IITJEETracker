@@ -47,6 +47,20 @@ export const authService = {
     }
   },
 
+  updateUser: (updatedUser: User) => {
+    const users = authService.getUsers();
+    const index = users.findIndex(u => u.id === updatedUser.id);
+    if (index !== -1) {
+        users[index] = updatedUser;
+        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+        // Update session if it's the current user
+        const session = authService.getSession();
+        if (session && session.id === updatedUser.id) {
+            authService.setSession(updatedUser);
+        }
+    }
+  },
+
   deleteUser: (email: string) => {
     const users = authService.getUsers();
     const newUsers = users.filter(u => u.email !== email);
@@ -55,7 +69,7 @@ export const authService = {
     localStorage.removeItem(`bt-jee-tracker-practice-${email}`);
   },
 
-  register: (name: string, email: string, password: string, coaching: string, targetYear: string, question: string, answer: string): { success: boolean; message?: string; user?: User } => {
+  register: (name: string, email: string, password: string, coaching: string, targetYear: string, question: string, answer: string, role: 'student' | 'parent' = 'student'): { success: boolean; message?: string; user?: User } => {
     const users = authService.getUsers();
     
     if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
@@ -69,7 +83,7 @@ export const authService = {
       coachingInstitute: coaching,
       targetYear: targetYear,
       passwordHash: hashPassword(password),
-      role: 'student',
+      role: role,
       securityQuestion: question,
       securityAnswer: answer.toLowerCase().trim()
     };
@@ -126,6 +140,63 @@ export const authService = {
     localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
 
     return { success: true, message: 'Password reset successfully. Please login.' };
+  },
+
+  // --- PARENT CONNECTION LOGIC ---
+
+  sendConnectionRequest: (parentId: string, studentEmail: string): { success: boolean; message: string } => {
+      const users = authService.getUsers();
+      const student = users.find(u => u.email.toLowerCase() === studentEmail.toLowerCase() && u.role === 'student');
+      const parent = users.find(u => u.id === parentId);
+
+      if (!student) return { success: false, message: 'Student ID (Email) not found.' };
+      if (!parent) return { success: false, message: 'Parent session invalid.' };
+
+      if (student.linkedUserId) return { success: false, message: 'Student is already connected to a parent.' };
+      if (student.connectionRequestFrom) return { success: false, message: 'Student already has a pending request.' };
+
+      // Set Request
+      student.connectionRequestFrom = parentId;
+      authService.updateUser(student);
+
+      return { success: true, message: 'Request sent! Waiting for student approval.' };
+  },
+
+  acceptConnectionRequest: (studentId: string, parentId: string): { success: boolean; message: string } => {
+      const users = authService.getUsers();
+      const student = users.find(u => u.id === studentId);
+      const parent = users.find(u => u.id === parentId);
+
+      if (!student || !parent) return { success: false, message: 'User not found.' };
+
+      // Link them
+      student.linkedUserId = parent.id;
+      student.connectionRequestFrom = undefined; // Clear request
+      
+      parent.linkedUserId = student.id;
+
+      authService.updateUser(student);
+      authService.updateUser(parent);
+
+      return { success: true, message: 'Connected successfully!' };
+  },
+
+  rejectConnectionRequest: (studentId: string) => {
+      const users = authService.getUsers();
+      const student = users.find(u => u.id === studentId);
+      if (student) {
+          student.connectionRequestFrom = undefined;
+          authService.updateUser(student);
+      }
+  },
+
+  // Helper to get connected user details
+  getLinkedUser: (currentUserId: string): User | null => {
+      const users = authService.getUsers();
+      const currentUser = users.find(u => u.id === currentUserId);
+      if (!currentUser || !currentUser.linkedUserId) return null;
+      
+      return users.find(u => u.id === currentUser.linkedUserId) || null;
   },
 
   setSession: (user: User) => {
