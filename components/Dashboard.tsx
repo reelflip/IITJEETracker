@@ -11,7 +11,7 @@ import { AdminPanel } from './AdminPanel';
 import { PerformanceAnalytics } from './PerformanceAnalytics'; 
 import { MockExamInterface } from './MockExamInterface'; 
 import { NoticeBoard } from './NoticeBoard'; // Import NoticeBoard
-import { LayoutDashboard, Table2, BrainCircuit, Search, Menu, X, BookCheck, LogOut, UserCircle, CalendarClock, ShieldCheck, BarChart2, FileText, Baby, Link as LinkIcon, Timer } from 'lucide-react';
+import { LayoutDashboard, Table2, BrainCircuit, Search, Menu, X, BookCheck, LogOut, UserCircle, CalendarClock, ShieldCheck, BarChart2, FileText, Baby, Link as LinkIcon, Timer, Save, CheckCircle } from 'lucide-react';
 import { authService } from '../services/authService';
 
 interface DashboardProps {
@@ -129,6 +129,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSubject, setFilterSubject] = useState<Subject | 'All'>('All');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
   // Stats calculation
   const totalTopics = SYLLABUS_DATA.length;
@@ -173,7 +174,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
       return { label: "Crunch Time", value: `${diffDays} Days Left`, color: "text-red-600" };
   }, [displayTargetYear]);
 
-  // Save changes ONLY if role is student
+  // Save changes ONLY if role is student (Auto-save backup)
   useEffect(() => {
     if (userRole === 'student') {
         localStorage.setItem(progressKey, JSON.stringify(progress));
@@ -190,6 +191,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
       ...prev,
       [id]: { ...prev[id], ...updates }
     }));
+    
+    // Reset save status on change to encourage saving
+    if (saveStatus === 'saved') setSaveStatus('idle');
+  };
+
+  const handleManualSave = () => {
+      setSaveStatus('saving');
+      // Force save to localStorage (redundant with useEffect but ensures immediate sync for user confidence)
+      localStorage.setItem(progressKey, JSON.stringify(progress));
+      
+      // Simulate network delay for UX
+      setTimeout(() => {
+          setSaveStatus('saved');
+          // Reset to idle after 2 seconds
+          setTimeout(() => setSaveStatus('idle'), 2000);
+      }, 500);
   };
 
   const handlePracticeUpdate = (topicName: string, isCorrect: boolean) => {
@@ -457,7 +474,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
                       className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bt-blue focus:border-transparent outline-none"
                     />
                   </div>
-                  <div className="flex gap-2 overflow-x-auto pb-1 md:pb-0">
+                  <div className="flex gap-2 items-center overflow-x-auto pb-1 md:pb-0">
                     {(['All', Subject.PHYSICS, Subject.CHEMISTRY, Subject.MATHS] as const).map(subj => (
                       <button
                         key={subj}
@@ -471,6 +488,23 @@ export const Dashboard: React.FC<DashboardProps> = ({ userId, userName, userCoac
                         {subj}
                       </button>
                     ))}
+                    
+                    {/* MANUAL SAVE BUTTON FOR STUDENTS */}
+                    {userRole === 'student' && (
+                        <>
+                            <div className="w-px h-6 bg-gray-300 mx-2 hidden md:block"></div>
+                            <button 
+                                onClick={handleManualSave}
+                                disabled={saveStatus !== 'idle'}
+                                className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all whitespace-nowrap shadow-sm ${
+                                    saveStatus === 'saved' ? 'bg-green-600 text-white' : 'bg-bt-blue text-white hover:bg-blue-700'
+                                }`}
+                            >
+                                {saveStatus === 'saved' ? <CheckCircle size={18} /> : <Save size={18} />}
+                                {saveStatus === 'saved' ? 'Saved!' : 'Save Changes'}
+                            </button>
+                        </>
+                    )}
                   </div>
                 </div>
 
