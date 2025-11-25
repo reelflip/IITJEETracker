@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { LogIn, User as UserIcon, ArrowRight, Lock, Mail, Building2, Calendar, KeyRound, HelpCircle, Info, BookOpen, MessageCircle } from 'lucide-react';
+import { LogIn, User as UserIcon, ArrowRight, Lock, Mail, Building2, Calendar, KeyRound, HelpCircle, Info, BookOpen, MessageCircle, Upload } from 'lucide-react';
 import { authService } from '../services/authService';
 import { User, COACHING_INSTITUTES, SECURITY_QUESTIONS } from '../types';
 import { Logo } from './Logo';
@@ -47,6 +48,28 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onAboutClick, onB
     setSecurityAnswer('');
     setNewPassword('');
     setForgotStep(1);
+  };
+
+  const handleImportData = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const json = JSON.parse(event.target?.result as string);
+                if (confirm("This will restore data from the backup file and overwrite any existing data on this browser. Continue?")) {
+                    Object.keys(json).forEach(key => {
+                        localStorage.setItem(key, json[key]);
+                    });
+                    alert("Data restored successfully! You can now login.");
+                    window.location.reload();
+                }
+            } catch (error) {
+                alert("Invalid backup file.");
+            }
+        };
+        reader.readAsText(file);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -386,27 +409,43 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onAboutClick, onB
             </div>
           )}
 
-          <div className="mt-8 pt-4 border-t border-gray-100 flex flex-row justify-center gap-6">
-             <button 
-                onClick={onAboutClick}
-                className="text-xs font-bold text-gray-600 hover:text-bt-blue flex items-center gap-1.5 transition-colors"
-             >
-                <Info size={14} /> About Us
-             </button>
-             <div className="w-px h-4 bg-gray-300"></div>
-             <button 
-                onClick={onBlogsClick}
-                className="text-xs font-bold text-gray-600 hover:text-bt-blue flex items-center gap-1.5 transition-colors"
-             >
-                <BookOpen size={14} /> Insights Blog
-             </button>
-             <div className="w-px h-4 bg-gray-300"></div>
-             <button 
-                onClick={onContactClick}
-                className="text-xs font-bold text-gray-600 hover:text-bt-blue flex items-center gap-1.5 transition-colors"
-             >
-                <MessageCircle size={14} /> Contact Support
-             </button>
+          <div className="mt-8 pt-4 border-t border-gray-100 flex flex-col gap-4">
+             <div className="flex flex-row justify-center gap-6">
+                <button 
+                    onClick={onAboutClick}
+                    className="text-xs font-bold text-gray-600 hover:text-bt-blue flex items-center gap-1.5 transition-colors"
+                >
+                    <Info size={14} /> About Us
+                </button>
+                <div className="w-px h-4 bg-gray-300"></div>
+                <button 
+                    onClick={onBlogsClick}
+                    className="text-xs font-bold text-gray-600 hover:text-bt-blue flex items-center gap-1.5 transition-colors"
+                >
+                    <BookOpen size={14} /> Insights Blog
+                </button>
+                <div className="w-px h-4 bg-gray-300"></div>
+                <button 
+                    onClick={onContactClick}
+                    className="text-xs font-bold text-gray-600 hover:text-bt-blue flex items-center gap-1.5 transition-colors"
+                >
+                    <MessageCircle size={14} /> Contact Support
+                </button>
+             </div>
+             
+             {/* Restore Button */}
+             <div className="text-center">
+                 <label className="inline-flex items-center gap-2 text-[10px] text-gray-400 hover:text-gray-600 cursor-pointer transition-colors">
+                     <Upload size={10} /> 
+                     Moved to a new device? Restore Backup
+                     <input 
+                        type="file" 
+                        accept=".json" 
+                        className="hidden" 
+                        onChange={handleImportData}
+                     />
+                 </label>
+             </div>
           </div>
         </div>
       </div>

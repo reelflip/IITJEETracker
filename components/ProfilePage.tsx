@@ -1,6 +1,5 @@
-
 import React, { useState, useMemo } from 'react';
-import { User as UserIcon, Mail, Building2, ShieldCheck, Link as LinkIcon, Send, CheckCircle, XCircle, AlertCircle, GraduationCap, Calendar, Timer, Pencil, Save, X, Loader2 } from 'lucide-react';
+import { User as UserIcon, Mail, Building2, ShieldCheck, Link as LinkIcon, Send, CheckCircle, XCircle, AlertCircle, GraduationCap, Calendar, Timer, Pencil, Save, X, Loader2, Share2, Download } from 'lucide-react';
 import { authService } from '../services/authService';
 import { User, COACHING_INSTITUTES } from '../types';
 
@@ -115,6 +114,20 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ user, linkedUser, onCo
         }
         setSaveLoading(false);
       }, 500);
+  };
+
+  const handleShareProgress = () => {
+      const data = authService.generateStudentSnapshot(user);
+      const blob = new Blob([data], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${user.name.replace(/\s+/g, '_')}_progress_snapshot.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      alert("Progress Snapshot Downloaded!\n\nSend this file to your Parent or Admin. They can upload it in their account to see your latest data.");
   };
 
   return (
@@ -264,33 +277,44 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ user, linkedUser, onCo
               </div>
 
               {/* Status / Countdown Card */}
-              <div className="bg-blue-50/50 rounded-xl p-6 border border-blue-100 space-y-4">
-                 <h3 className="font-semibold text-blue-900 border-b border-blue-200 pb-2 mb-2">
-                     {user.role === 'parent' ? 'Family Access' : 'Exam Countdown'}
-                 </h3>
-                 
-                 {user.role === 'student' && examCountdown ? (
-                     <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center text-blue-600 shadow-sm border border-blue-100">
-                            <Timer size={24} />
+              <div className="bg-blue-50/50 rounded-xl p-6 border border-blue-100 space-y-4 flex flex-col justify-between">
+                 <div>
+                    <h3 className="font-semibold text-blue-900 border-b border-blue-200 pb-2 mb-2">
+                        {user.role === 'parent' ? 'Family Access' : 'Exam Countdown'}
+                    </h3>
+                    
+                    {user.role === 'student' && examCountdown ? (
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center text-blue-600 shadow-sm border border-blue-100">
+                                <Timer size={24} />
+                            </div>
+                            <div>
+                                <p className={`text-2xl font-bold ${examCountdown.color}`}>{examCountdown.days}</p>
+                                <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">{examCountdown.label}</p>
+                            </div>
                         </div>
-                        <div>
-                            <p className={`text-2xl font-bold ${examCountdown.color}`}>{examCountdown.days}</p>
-                            <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">{examCountdown.label}</p>
+                    ) : (
+                        <div className="flex items-start gap-3">
+                            <ShieldCheck className="text-green-600 mt-1" />
+                            <div>
+                            <p className="font-bold text-gray-900">Active {user.role === 'parent' ? 'Guardian' : 'Student'} Account</p>
+                            <p className="text-sm text-gray-600 mt-1">
+                                {user.role === 'parent' 
+                                    ? "You can connect to a student account to view their academic progress." 
+                                    : "You have full access to the Syllabus Tracker, Question Bank, and Smart Planner features."}
+                            </p>
+                            </div>
                         </div>
-                     </div>
-                 ) : (
-                     <div className="flex items-start gap-3">
-                        <ShieldCheck className="text-green-600 mt-1" />
-                        <div>
-                        <p className="font-bold text-gray-900">Active {user.role === 'parent' ? 'Guardian' : 'Student'} Account</p>
-                        <p className="text-sm text-gray-600 mt-1">
-                            {user.role === 'parent' 
-                                ? "You can connect to a student account to view their academic progress." 
-                                : "You have full access to the Syllabus Tracker, Question Bank, and Smart Planner features."}
-                        </p>
-                        </div>
-                     </div>
+                    )}
+                 </div>
+
+                 {user.role === 'student' && (
+                     <button 
+                        onClick={handleShareProgress}
+                        className="w-full mt-4 bg-white border border-blue-200 text-bt-blue hover:bg-blue-50 font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 shadow-sm transition-all"
+                     >
+                         <Share2 size={16} /> Share Progress with Parent/Admin
+                     </button>
                  )}
               </div>
 

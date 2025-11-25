@@ -18,20 +18,21 @@ export enum Difficulty {
   HARD = 'Hard (Advanced Challenger)'
 }
 
+// Matches SQL: users table
 export interface User {
   id: string;
   name: string;
   email: string;
-  coachingInstitute?: string;
-  targetYear?: string;
-  passwordHash: string; 
-  role: 'admin' | 'student' | 'parent'; // Added Parent Role
-  securityQuestion?: string;
-  securityAnswer?: string;
-  
-  // Connection Logic
-  linkedUserId?: string; // ID of the connected Student (for parent) or Parent (for student)
-  connectionRequestFrom?: string; // ID of the parent requesting connection
+  passwordHash?: string; // Internal use
+  role: 'admin' | 'student' | 'parent';
+  coachingInstitute?: string; // coaching_institute
+  targetYear?: string;        // target_year
+  securityQuestion?: string;  // security_question
+  securityAnswer?: string;    // security_answer
+  linkedUserId?: string;      // linked_user_id
+  connectionRequestFrom?: string; // connection_request_from
+  created_at?: string;
+  updated_at?: string;
 }
 
 export const COACHING_INSTITUTES = [
@@ -73,17 +74,34 @@ export interface ExerciseProgress {
   total: number;
 }
 
+// Matches SQL: chapter_progress table (Frontend representation)
 export interface TopicProgress {
-  topicId: string;
+  topicId: string; // topic_id
   status: Status;
   notes?: string;
   exercises: [ExerciseProgress, ExerciseProgress, ExerciseProgress, ExerciseProgress];
 }
 
+// Helper type for DB flat structure mapping
+export interface DBChapterProgress {
+  id?: number;
+  user_id: string;
+  topic_id: string;
+  status: Status;
+  notes: string;
+  ex1_solved: number; ex1_total: number;
+  ex2_solved: number; ex2_total: number;
+  ex3_solved: number; ex3_total: number;
+  ex4_solved: number; ex4_total: number;
+  updated_at?: string;
+}
+
+// Matches SQL: practice_stats table
 export interface TopicPracticeStats {
-  topicId: string;
+  topicId: string; // topic_id
   attempts: number;
   correct: number;
+  last_attempt_at?: string;
 }
 
 export interface PlanRequest {
@@ -100,7 +118,7 @@ export interface Question {
   correctAnswer: string;
   explanation: string;
   difficulty: string;
-  subject?: Subject; // Optional for generic use, required for exams
+  subject?: Subject;
 }
 
 export interface TimetableConstraints {
@@ -117,14 +135,14 @@ export interface DailySchedule {
   hours: number;
 }
 
+// Matches SQL: timetables table (stored as JSON)
 export interface WeeklySchedule {
   summary: string;
   schedule: DailySchedule[];
   guidelines: string[];
 }
 
-// --- EXAM SIMULATOR TYPES ---
-
+// Matches SQL: custom_exams table
 export interface ExamPaper {
   id: string;
   title: string;
@@ -136,6 +154,8 @@ export interface ExamPaper {
     subject: Subject;
     questions: Question[];
   }[];
+  created_by?: string;
+  created_at?: string;
 }
 
 export enum QuestionPaletteStatus {
@@ -146,7 +166,9 @@ export enum QuestionPaletteStatus {
   ANSWERED_AND_MARKED = 'answered_marked'
 }
 
+// Matches SQL: exam_results table
 export interface ExamResult {
+  id?: number;
   examId: string;
   score: number;
   totalQuestions: number;
@@ -155,35 +177,35 @@ export interface ExamResult {
   wrong: number;
   accuracy: number;
   timeTaken: string;
+  attempted_at?: string;
 }
 
-// --- NOTICE BOARD & MOTIVATION TYPES ---
-
+// Matches SQL: notices table
 export interface Notice {
   id: string;
   title: string;
   content: string;
-  date: string;
-  isImportant: boolean;
+  date: string; // mapped from created_at
+  isImportant: boolean; // is_important
 }
 
+// Matches SQL: motivation table
 export interface MotivationItem {
   id: string;
   type: 'quote' | 'image';
-  content: string; // Text for quote, URL for image
+  content: string; 
   author?: string;
 }
 
-// --- BLOG TYPES ---
-
+// Matches SQL: blogs table
 export interface BlogPost {
   id: string;
   title: string;
   excerpt: string;
   content: string;
   author: string;
-  date: string;
-  readTime: string;
+  date: string; // mapped from created_at
+  readTime: string; // read_time
   category: 'Strategy' | 'Mental Health' | 'Success Story' | 'Academic';
-  imageUrl?: string;
+  imageUrl?: string; // image_url
 }

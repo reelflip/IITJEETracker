@@ -1,13 +1,12 @@
-
 import React, { useState, useEffect } from 'react';
 import { authService } from '../services/authService';
 import { contentService } from '../services/contentService';
 import { User, TopicProgress, Status, Notice, MotivationItem, Subject, ExamPaper, Question, BlogPost } from '../types';
 import { SYLLABUS_DATA, INITIAL_PROGRESS, MOCK_QUESTION_DB } from '../constants';
-import { Trash2, Eye, ShieldCheck, GraduationCap, X, Search, Lock, Megaphone, Quote, Plus, Layout, Mail, Send, Users, FileText, CheckSquare, BookOpen, PenTool } from 'lucide-react';
+import { Trash2, Eye, ShieldCheck, GraduationCap, X, Search, Lock, Megaphone, Quote, Plus, Layout, Mail, Send, Users, FileText, CheckSquare, BookOpen, PenTool, Download, Upload, RefreshCw, AlertTriangle, Info } from 'lucide-react';
 
 export const AdminPanel: React.FC = () => {
-    const [activeTab, setActiveTab] = useState<'users' | 'content' | 'blogs' | 'tests' | 'communication'>('users');
+    const [activeTab, setActiveTab] = useState<'users' | 'content' | 'blogs' | 'tests' | 'communication' | 'data'>('users');
     
     // --- USER MGMT STATE ---
     const [users, setUsers] = useState<User[]>([]);
@@ -54,7 +53,7 @@ export const AdminPanel: React.FC = () => {
             setCustomExams(contentService.getCustomExams());
         } else if (activeTab === 'blogs') {
             setBlogs(contentService.getBlogs());
-        } else {
+        } else if (activeTab === 'content') {
             setNotices(contentService.getNotices());
             setMotivations(contentService.getMotivation());
         }
@@ -235,6 +234,75 @@ export const AdminPanel: React.FC = () => {
         }, 1500);
     };
 
+    // --- DATA BACKUP HANDLERS ---
+    const handleExportData = () => {
+        const data: Record<string, any> = {};
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith('bt-jee-tracker-')) {
+                data[key] = localStorage.getItem(key);
+            }
+        }
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `jee-tracker-backup-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
+    const handleImportData = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const json = JSON.parse(event.target?.result as string);
+                if (confirm("WARNING: This will OVERWRITE all current data on this device. Are you sure?")) {
+                    // Clear existing app data
+                    Object.keys(localStorage).forEach(key => {
+                        if (key.startsWith('bt-jee-tracker-')) localStorage.removeItem(key);
+                    });
+                    // Restore new data
+                    Object.keys(json).forEach(key => {
+                        localStorage.setItem(key, json[key]);
+                    });
+                    alert("Data restored successfully! The page will now reload.");
+                    window.location.reload();
+                }
+            } catch (error) {
+                alert("Invalid backup file. Import failed.");
+                console.error(error);
+            }
+        };
+        reader.readAsText(file);
+    };
+
+    const handleImportStudentSnapshot = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const res = authService.importStudentSnapshot(event.target?.result as string);
+                if(res.success) {
+                    alert(res.message);
+                    setUsers(authService.getUsers()); // Refresh list
+                } else {
+                    alert(res.message);
+                }
+            } catch (error) {
+                alert("Invalid snapshot file.");
+            }
+        };
+        reader.readAsText(file);
+    };
+
     const filteredUsers = users.filter(u => 
         u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
         u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -295,24 +363,41 @@ export const AdminPanel: React.FC = () => {
                         >
                             <Mail size={16} /> Communication
                         </button>
+                        <button 
+                            onClick={() => setActiveTab('data')}
+                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors flex items-center gap-2 whitespace-nowrap ${
+                                activeTab === 'data' ? 'bg-bt-blue text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                            }`}
+                        >
+                            <RefreshCw size={16} /> Sync Data
+                        </button>
                     </div>
                 </div>
             </div>
 
-            {/* --- USERS TAB --- */}
+            {/* ... (Users, Content, Blogs, Tests, Communication Tabs remain same - omitted for brevity) ... */}
             {activeTab === 'users' && (
                 <div className="bg-white rounded-xl shadow border border-gray-200 p-6 animate-in fade-in">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                         <h3 className="text-lg font-bold text-gray-800">Registered Users</h3>
-                        <div className="relative w-full md:w-64">
-                            <Search className="absolute left-3 top-2.5 text-gray-400 w-4 h-4" />
-                            <input 
-                                type="text" 
-                                placeholder="Search users..." 
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 outline-none"
-                            />
+                        
+                        <div className="flex gap-4 w-full md:w-auto">
+                            {/* Import Snapshot Button */}
+                            <label className="bg-green-50 text-green-700 border border-green-200 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 cursor-pointer hover:bg-green-100 transition-colors">
+                                <Upload size={16} /> Import Student
+                                <input type="file" accept=".json" className="hidden" onChange={handleImportStudentSnapshot} />
+                            </label>
+
+                            <div className="relative w-full md:w-64">
+                                <Search className="absolute left-3 top-2.5 text-gray-400 w-4 h-4" />
+                                <input 
+                                    type="text" 
+                                    placeholder="Search users..." 
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 outline-none"
+                                />
+                            </div>
                         </div>
                     </div>
 
@@ -369,7 +454,6 @@ export const AdminPanel: React.FC = () => {
             {/* --- CONTENT TAB --- */}
             {activeTab === 'content' && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in">
-                    
                     {/* Notice Board Manager */}
                     <div className="bg-white rounded-xl shadow border border-gray-200 p-6">
                         <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -465,7 +549,6 @@ export const AdminPanel: React.FC = () => {
                             ))}
                         </div>
                     </div>
-
                 </div>
             )}
 
@@ -719,6 +802,66 @@ export const AdminPanel: React.FC = () => {
                             {sendingEmail ? 'Sending...' : <><Send size={18} /> Send Broadcast</>}
                         </button>
                     </form>
+                </div>
+            )}
+
+            {/* --- DATA BACKUP TAB --- */}
+            {activeTab === 'data' && (
+                <div className="max-w-3xl mx-auto animate-in fade-in">
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 mb-8 flex gap-4">
+                        <AlertTriangle className="text-yellow-600 flex-shrink-0" size={32} />
+                        <div>
+                            <h3 className="font-bold text-yellow-800 text-lg">Why isn't my data on my other laptop?</h3>
+                            <p className="text-yellow-700 text-sm mt-2 leading-relaxed">
+                                This application is designed to be privacy-focused and offline-capable. All your data is stored 
+                                <strong> locally in this specific browser</strong> (using LocalStorage), not on a central server. 
+                                Hosting the code on Hostinger only serves the application files, not the database.
+                            </p>
+                            <div className="mt-4 p-3 bg-yellow-100/50 rounded-lg border border-yellow-200 text-xs text-yellow-800 font-medium flex items-center gap-2">
+                                <Info size={14} />
+                                To move data to another device, use the Export/Import tools below.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* EXPORT CARD */}
+                        <div className="bg-white p-8 rounded-xl shadow-md border border-gray-200 flex flex-col items-center text-center">
+                            <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center text-bt-blue mb-4">
+                                <Download size={32} />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-800">Export System Data</h3>
+                            <p className="text-sm text-gray-500 mt-2 mb-6">
+                                Download a JSON file containing the entire database (Users, Progress, Exams) from this device.
+                            </p>
+                            <button 
+                                onClick={handleExportData}
+                                className="bg-bt-blue hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-bold w-full flex items-center justify-center gap-2"
+                            >
+                                <Download size={18} /> Download Backup
+                            </button>
+                        </div>
+
+                        {/* IMPORT CARD */}
+                        <div className="bg-white p-8 rounded-xl shadow-md border border-gray-200 flex flex-col items-center text-center relative">
+                            <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center text-green-600 mb-4">
+                                <Upload size={32} />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-800">Restore Data</h3>
+                            <p className="text-sm text-gray-500 mt-2 mb-6">
+                                Upload a backup file to overwrite current data on this device. <strong>Warning: Irreversible.</strong>
+                            </p>
+                            <label className="bg-white border-2 border-green-600 text-green-600 hover:bg-green-50 px-6 py-3 rounded-lg font-bold w-full flex items-center justify-center gap-2 cursor-pointer transition-colors">
+                                <Upload size={18} /> Select File
+                                <input 
+                                    type="file" 
+                                    accept=".json" 
+                                    className="hidden" 
+                                    onChange={handleImportData}
+                                />
+                            </label>
+                        </div>
+                    </div>
                 </div>
             )}
 
