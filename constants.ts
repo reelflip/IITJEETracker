@@ -321,13 +321,27 @@ export const MOCK_QUESTION_DB: Partial<Record<Subject, Partial<Question>[]>> = {
 // --- PAPER GENERATION UTILS ---
 
 export const PAST_PAPERS_METADATA = [
+    // Existing Mains
     { id: 'jee-mains-2024-jan-s1', title: 'JEE Mains 2024 (Jan 27 Shift 1)', year: '2024', type: 'Mains', duration: 180 },
     { id: 'jee-mains-2023-apr-s2', title: 'JEE Mains 2023 (Apr 10 Shift 2)', year: '2023', type: 'Mains', duration: 180 },
     { id: 'jee-mains-2022-june-s1', title: 'JEE Mains 2022 (June 24 Shift 1)', year: '2022', type: 'Mains', duration: 180 },
     { id: 'jee-mains-2021-feb-s2', title: 'JEE Mains 2021 (Feb 24 Shift 2)', year: '2021', type: 'Mains', duration: 180 },
     { id: 'jee-mains-2020-sept-s1', title: 'JEE Mains 2020 (Sept 2 Shift 1)', year: '2020', type: 'Mains', duration: 180 },
+    
+    // New Mains (2015-2019)
+    { id: 'jee-mains-2019-jan-s1', title: 'JEE Mains 2019 (Jan 9 Shift 1)', year: '2019', type: 'Mains', duration: 180 },
+    { id: 'jee-mains-2018-offline', title: 'JEE Mains 2018 (Offline)', year: '2018', type: 'Mains', duration: 180 },
+    { id: 'jee-mains-2017-offline', title: 'JEE Mains 2017 (Offline)', year: '2017', type: 'Mains', duration: 180 },
+    { id: 'jee-mains-2016-offline', title: 'JEE Mains 2016 (Offline)', year: '2016', type: 'Mains', duration: 180 },
+    { id: 'jee-mains-2015-offline', title: 'JEE Mains 2015 (Offline)', year: '2015', type: 'Mains', duration: 180 },
+
+    // Advanced
     { id: 'jee-adv-2023-p1', title: 'JEE Advanced 2023 (Paper 1)', year: '2023', type: 'Advanced', duration: 180 },
-    { id: 'jee-adv-2022-p1', title: 'JEE Advanced 2022 (Paper 1)', year: '2022', type: 'Advanced', duration: 180 }
+    { id: 'jee-adv-2022-p1', title: 'JEE Advanced 2022 (Paper 1)', year: '2022', type: 'Advanced', duration: 180 },
+    // New Advanced (2019-2021)
+    { id: 'jee-adv-2021-p1', title: 'JEE Advanced 2021 (Paper 1)', year: '2021', type: 'Advanced', duration: 180 },
+    { id: 'jee-adv-2020-p1', title: 'JEE Advanced 2020 (Paper 1)', year: '2020', type: 'Advanced', duration: 180 },
+    { id: 'jee-adv-2019-p1', title: 'JEE Advanced 2019 (Paper 1)', year: '2019', type: 'Advanced', duration: 180 }
 ];
 
 export const generateMockPaper = (paperId: string): ExamPaper | null => {
