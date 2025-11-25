@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { LogIn, User as UserIcon, ArrowRight, Lock, Mail, Building2, Calendar, KeyRound, HelpCircle, Info, BookOpen, MessageCircle, Upload } from 'lucide-react';
 import { authService } from '../services/authService';
@@ -72,14 +73,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onAboutClick, onB
         reader.readAsText(file);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
-    setTimeout(() => {
+    // Simulate UX delay
+    await new Promise(resolve => setTimeout(resolve, 600));
+
+    try {
       if (view === 'signup') {
-        const result = authService.register(name, email, password, coaching, targetYear, securityQuestion, securityAnswer, role);
+        const result = await authService.register(name, email, password, coaching, targetYear, securityQuestion, securityAnswer, role);
         if (result.success && result.user) {
           onLogin(result.user);
         } else {
@@ -102,7 +106,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onAboutClick, onB
           setLoading(false);
         }
       } else if (view === 'login') {
-        const result = authService.login(email, password);
+        const result = await authService.login(email, password);
         if (result.success && result.user) {
           onLogin(result.user);
         } else {
@@ -112,7 +116,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onAboutClick, onB
       } else if (view === 'forgot') {
          if (forgotStep === 1) {
              // Check email and get question
-             const result = authService.getSecurityQuestion(email);
+             const result = await authService.getSecurityQuestion(email);
              if (result.success && result.question) {
                  setRetrievedQuestion(result.question);
                  setForgotStep(2);
@@ -123,7 +127,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onAboutClick, onB
              setLoading(false);
          } else {
              // Reset Password
-             const result = authService.resetPassword(email, securityAnswer, newPassword);
+             const result = await authService.resetPassword(email, securityAnswer, newPassword);
              if (result.success) {
                  setSuccessMsg("Password reset successful! You can now login.");
                  setTimeout(() => {
@@ -136,7 +140,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onAboutClick, onB
              }
          }
       }
-    }, 600);
+    } catch (e) {
+      setError("An unexpected error occurred. Please try again.");
+      setLoading(false);
+    }
   };
 
   return (

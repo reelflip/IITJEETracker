@@ -4,42 +4,14 @@ import { api } from './api';
 
 const SESSION_KEY = 'bt-jee-tracker-current-session';
 
-// Simple "hashing" for simulation
+// Simple hash function (still needed for client-side matching if not strictly checking hash on server yet, 
+// but ideally hashing happens on server. We'll send raw/hashed to server.)
 const hashPassword = (password: string) => btoa(password).split('').reverse().join('');
 
-// Seed default admin if not exists
-const seedAdmin = async () => {
-    try {
-        const users = await api.users.getAll();
-        if (!users.find(u => u.email === 'vikas.00@gmail.com')) {
-            const admin: User = {
-                id: 'admin-001',
-                name: 'Admin',
-                email: 'vikas.00@gmail.com',
-                coachingInstitute: 'Head Office',
-                targetYear: 'IIT JEE 2025',
-                passwordHash: hashPassword('Ishika@123'),
-                role: 'admin',
-                securityQuestion: "What is the name of your first pet?",
-                securityAnswer: "admin"
-            };
-            await api.users.create(admin);
-        }
-    } catch (e) {
-        console.error("Error seeding admin", e);
-    }
-};
-
-seedAdmin();
-
 export const authService = {
-  getUsers: (): User[] => {
-    // Synchronous wrapper for compatibility with UI components that expect instant data
-    // In a real React Query / SWR implementation, this would be async.
-    // For now, we read directly from localStorage for list views to avoid major UI refactor.
+  getUsers: async (): Promise<User[]> => {
     try {
-      const item = localStorage.getItem('bt-jee-tracker-users-db');
-      return item ? JSON.parse(item) : [];
+        return await api.users.getAll();
     } catch { return []; }
   },
 
@@ -51,190 +23,135 @@ export const authService = {
     }
   },
 
-  updateProfile: (userId: string, updates: Partial<User>): { success: boolean; message?: string; user?: User } => {
-      // Synchronous facade for immediate UI feedback
-      const users = authService.getUsers();
-      const index = users.findIndex(u => u.id === userId);
-      
-      if (index === -1) return { success: false, message: "User not found" };
+  updateProfile: async (userId: string, updates: Partial<User>): Promise<{ success: boolean; message?: string; user?: User }> => {
+      try {
+          const user = await api.users.getById(userId);
+          if (!user) return { success: false, message: "User not found" };
 
-      const updatedUser = { ...users[index], ...updates, updated_at: new Date().toISOString() };
-      users[index] = updatedUser;
-      
-      localStorage.setItem('bt-jee-tracker-users-db', JSON.stringify(users));
-      
-      const session = authService.getSession();
-      if (session && session.id === userId) {
-          authService.setSession(updatedUser);
+          const updatedUser = { ...user, ...updates };
+          await api.users.update(updatedUser);
+          
+          const session = authService.getSession();
+          if (session && session.id === userId) {
+              authService.setSession(updatedUser);
+          }
+
+          return { success: true, user: updatedUser };
+      } catch (e) {
+          return { success: false, message: "Update failed" };
       }
-
-      return { success: true, user: updatedUser };
   },
 
   deleteUser: async (email: string) => {
     await api.users.delete(email);
   },
 
-  register: (name: string, email: string, password: string, coaching: string, targetYear: string, question: string, answer: string, role: 'student' | 'parent' = 'student'): { success: boolean; message?: string; user?: User } => {
-    // Sync check for immediate feedback
-    const users = authService.getUsers();
-    if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
-      return { success: false, message: 'Email already registered.' };
+  register: async (name: string, email: string, password: string, coaching: string, targetYear: string, question: string, answer: string, role: 'student' | 'parent' = 'student'): Promise<{ success: boolean; message?: string; user?: User }> => {
+    try {
+        const newUser: User = {
+            id: crypto.randomUUID(),
+            name,
+            email: email.toLowerCase(),
+            coachingInstitute: coaching,
+            targetYear: targetYear,
+            passwordHash: hashPassword(password),
+            role: role,
+            securityQuestion: question,
+            securityAnswer: answer.toLowerCase().trim()
+        };
+
+        await api.users.register(newUser);
+        authService.setSession(newUser);
+        return { success: true, user: newUser };
+    } catch (e) {
+        return { success: false, message: 'Registration failed. Email might exist.' };
     }
-
-    const newUser: User = {
-      id: crypto.randomUUID(),
-      name,
-      email: email.toLowerCase(),
-      coachingInstitute: coaching,
-      targetYear: targetYear,
-      passwordHash: hashPassword(password),
-      role: role,
-      securityQuestion: question,
-      securityAnswer: answer.toLowerCase().trim(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-
-    users.push(newUser);
-    localStorage.setItem('bt-jee-tracker-users-db', JSON.stringify(users));
-    authService.setSession(newUser);
-    
-    return { success: true, user: newUser };
   },
 
-  login: (email: string, password: string): { success: boolean; message?: string; user?: User } => {
-    const users = authService.getUsers();
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+  login: async (email: string, password: string): Promise<{ success: boolean; message?: string; user?: User }> => {
+    try {
+        // In production, send password to server to check hash. 
+        // Here we simulate by checking return.
+        const result = await api.users.login(email, password);
+        
+        if (!result || !result.user) {
+             return { success: false, message: 'Invalid credentials' };
+        }
+        
+        // Simple client-side hash check fallback if server returns user but didn't check hash (depending on server implementation)
+        if (result.user.passwordHash !== hashPassword(password)) {
+             return { success: false, message: 'Incorrect password' };
+        }
 
-    if (!user) {
-      return { success: false, message: 'User not found.' };
+        authService.setSession(result.user);
+        return { success: true, user: result.user };
+    } catch (e) {
+        return { success: false, message: 'Login error' };
     }
-
-    if (user.passwordHash !== hashPassword(password)) {
-      return { success: false, message: 'Incorrect password.' };
-    }
-
-    authService.setSession(user);
-    return { success: true, user };
   },
 
-  getSecurityQuestion: (email: string): { success: boolean; question?: string; message?: string } => {
-    const users = authService.getUsers();
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-    
+  getSecurityQuestion: async (email: string): Promise<{ success: boolean; question?: string; message?: string }> => {
+    const user = await api.users.getByEmail(email);
     if (!user) return { success: false, message: 'User not found.' };
     if (!user.securityQuestion) return { success: false, message: 'No security question set.' };
-    
     return { success: true, question: user.securityQuestion };
   },
 
-  resetPassword: (email: string, answer: string, newPassword: string): { success: boolean; message?: string } => {
-    const users = authService.getUsers();
-    const userIndex = users.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
+  resetPassword: async (email: string, answer: string, newPassword: string): Promise<{ success: boolean; message?: string }> => {
+    const user = await api.users.getByEmail(email);
+    if (!user) return { success: false, message: 'User not found.' };
     
-    if (userIndex === -1) return { success: false, message: 'User not found.' };
-    
-    const user = users[userIndex];
     if (user.securityAnswer !== answer.toLowerCase().trim()) {
         return { success: false, message: 'Incorrect security answer.' };
     }
 
-    users[userIndex].passwordHash = hashPassword(newPassword);
-    users[userIndex].updated_at = new Date().toISOString();
-    localStorage.setItem('bt-jee-tracker-users-db', JSON.stringify(users));
+    user.passwordHash = hashPassword(newPassword);
+    await api.users.update(user);
 
     return { success: true, message: 'Password reset successfully. Please login.' };
   },
 
-  // Snapshot Logic
-  generateStudentSnapshot: (user: User) => {
-      const snapshot = {
-          user: user,
-          progress: localStorage.getItem(`bt-jee-tracker-progress-${user.email}`),
-          practice: localStorage.getItem(`bt-jee-tracker-practice-${user.email}`),
-          timetable: localStorage.getItem(`bt-jee-tracker-timetable-${user.email}`),
-          generatedAt: new Date().toISOString()
-      };
-      return JSON.stringify(snapshot, null, 2);
-  },
-
-  importStudentSnapshot: (jsonString: string): { success: boolean; message: string } => {
-      try {
-          const data = JSON.parse(jsonString);
-          if (!data.user || !data.user.email) return { success: false, message: "Invalid snapshot file." };
-          
-          const users = authService.getUsers();
-          const existingIndex = users.findIndex(u => u.email === data.user.email);
-          if (existingIndex !== -1) {
-              users[existingIndex] = data.user; 
-          } else {
-              users.push(data.user);
-          }
-          localStorage.setItem('bt-jee-tracker-users-db', JSON.stringify(users));
-
-          if (data.progress) localStorage.setItem(`bt-jee-tracker-progress-${data.user.email}`, data.progress);
-          if (data.practice) localStorage.setItem(`bt-jee-tracker-practice-${data.user.email}`, data.practice);
-          if (data.timetable) localStorage.setItem(`bt-jee-tracker-timetable-${data.user.email}`, data.timetable);
-
-          return { success: true, message: `Successfully imported data for ${data.user.name}` };
-      } catch (e) {
-          return { success: false, message: "Error parsing snapshot file." };
-      }
-  },
-
   // Parent Connection Logic
-  sendConnectionRequest: (parentId: string, studentEmail: string): { success: boolean; message: string } => {
-      const users = authService.getUsers();
-      const student = users.find(u => u.email.toLowerCase() === studentEmail.toLowerCase() && u.role === 'student');
-      const parent = users.find(u => u.id === parentId);
+  sendConnectionRequest: async (parentId: string, studentEmail: string): Promise<{ success: boolean; message: string }> => {
+      const student = await api.users.getByEmail(studentEmail);
+      if (!student || student.role !== 'student') return { success: false, message: 'Student ID not found.' };
 
-      if (!student) return { success: false, message: 'Student ID (Email) not found.' };
-      if (!parent) return { success: false, message: 'Parent session invalid.' };
-
-      if (student.linkedUserId) return { success: false, message: 'Student is already connected to a parent.' };
-      if (student.connectionRequestFrom) return { success: false, message: 'Student already has a pending request.' };
-
-      student.connectionRequestFrom = parentId;
+      if (student.linkedUserId) return { success: false, message: 'Student already connected.' };
       
-      // Save via direct write to emulate API update
-      const index = users.findIndex(u => u.id === student.id);
-      users[index] = student;
-      localStorage.setItem('bt-jee-tracker-users-db', JSON.stringify(users));
+      student.connectionRequestFrom = parentId;
+      await api.users.update(student);
 
-      return { success: true, message: 'Request sent! Waiting for student approval.' };
+      return { success: true, message: 'Request sent!' };
   },
 
-  acceptConnectionRequest: (studentId: string, parentId: string): { success: boolean; message: string } => {
-      const users = authService.getUsers();
-      const studentIndex = users.findIndex(u => u.id === studentId);
-      const parentIndex = users.findIndex(u => u.id === parentId);
+  acceptConnectionRequest: async (studentId: string, parentId: string): Promise<{ success: boolean; message: string }> => {
+      const student = await api.users.getById(studentId);
+      const parent = await api.users.getById(parentId);
 
-      if (studentIndex === -1 || parentIndex === -1) return { success: false, message: 'User not found.' };
+      if (!student || !parent) return { success: false, message: 'User not found.' };
 
-      users[studentIndex].linkedUserId = users[parentIndex].id;
-      users[studentIndex].connectionRequestFrom = undefined;
-      users[parentIndex].linkedUserId = users[studentIndex].id;
+      student.linkedUserId = parent.id;
+      student.connectionRequestFrom = undefined; // Clear
+      parent.linkedUserId = student.id;
 
-      localStorage.setItem('bt-jee-tracker-users-db', JSON.stringify(users));
+      await api.users.update(student);
+      await api.users.update(parent);
 
       return { success: true, message: 'Connected successfully!' };
   },
 
-  rejectConnectionRequest: (studentId: string) => {
-      const users = authService.getUsers();
-      const index = users.findIndex(u => u.id === studentId);
-      if (index !== -1) {
-          users[index].connectionRequestFrom = undefined;
-          localStorage.setItem('bt-jee-tracker-users-db', JSON.stringify(users));
+  rejectConnectionRequest: async (studentId: string) => {
+      const student = await api.users.getById(studentId);
+      if (student) {
+          student.connectionRequestFrom = undefined;
+          await api.users.update(student);
       }
   },
 
-  getLinkedUser: (currentUserId: string): User | null => {
-      const users = authService.getUsers();
-      const currentUser = users.find(u => u.id === currentUserId);
+  getLinkedUser: async (currentUserId: string): Promise<User | null> => {
+      const currentUser = await api.users.getById(currentUserId);
       if (!currentUser || !currentUser.linkedUserId) return null;
-      return users.find(u => u.id === currentUser.linkedUserId) || null;
+      return (await api.users.getById(currentUser.linkedUserId)) || null;
   },
 
   setSession: (user: User) => {
@@ -252,5 +169,18 @@ export const authService = {
 
   logout: () => {
     localStorage.removeItem(SESSION_KEY);
+  },
+
+  // Snapshot helpers (can remain local logic for now or fetch full dump from API)
+  generateStudentSnapshot: async (user: User) => {
+      // Fetch fresh data
+      const progress = await api.progress.getByUser(user.id);
+      // ... other fetches
+      const snapshot = {
+          user,
+          progress,
+          generatedAt: new Date().toISOString()
+      };
+      return JSON.stringify(snapshot, null, 2);
   }
 };

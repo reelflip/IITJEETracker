@@ -1,213 +1,168 @@
 
+
 /**
  * API Abstraction Layer
- * 
- * This file serves as the interface between the Frontend UI and the Data Store.
- * CURRENT STATE: Simulates a Database using LocalStorage.
- * FUTURE STATE: Replace internal logic with fetch/axios calls to Node.js Backend.
+ * Connects React Frontend to Node.js/MySQL Backend.
  */
 
-import { User, Notice, MotivationItem, BlogPost, ExamPaper, DBChapterProgress, TopicProgress, Status, WeeklySchedule, TopicPracticeStats } from "../types";
+import { User, Notice, MotivationItem, BlogPost, ExamPaper, TopicProgress, WeeklySchedule, TopicPracticeStats } from "../types";
 import { INITIAL_PROGRESS } from "../constants";
 
-const STORAGE_PREFIX = 'bt-jee-tracker-';
+// CHANGE THIS URL TO YOUR HOSTINGER BACKEND URL (e.g., 'https://api.yourdomain.com/api')
+const API_BASE = 'http://localhost:3001/api';
 
-// --- HELPER: Simulate Network Delay ---
-const delay = (ms: number = 300) => new Promise(resolve => setTimeout(resolve, ms));
-
-// --- HELPER: LocalStorage Wrapper ---
-const getStore = <T>(key: string, defaultVal: T): T => {
-    try {
-        const item = localStorage.getItem(STORAGE_PREFIX + key);
-        return item ? JSON.parse(item) : defaultVal;
-    } catch {
-        return defaultVal;
-    }
-};
-
-const setStore = <T>(key: string, value: T) => {
-    localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(value));
-};
+const headers = { 'Content-Type': 'application/json' };
 
 export const api = {
     // 1. USERS (Auth)
     users: {
         getAll: async (): Promise<User[]> => {
-            await delay();
-            return getStore<User[]>('users-db', []);
+            const res = await fetch(`${API_BASE}/users`);
+            return res.json();
         },
         getById: async (id: string): Promise<User | undefined> => {
-            await delay();
-            const users = getStore<User[]>('users-db', []);
-            return users.find(u => u.id === id);
+            const res = await fetch(`${API_BASE}/users/${id}`);
+            return res.ok ? res.json() : undefined;
         },
         getByEmail: async (email: string): Promise<User | undefined> => {
-            await delay();
-            const users = getStore<User[]>('users-db', []);
-            return users.find(u => u.email.toLowerCase() === email.toLowerCase());
+            const res = await fetch(`${API_BASE}/users?email=${encodeURIComponent(email)}`);
+            if (res.ok) {
+                const data = await res.json();
+                return Array.isArray(data) ? data[0] : data;
+            }
+            return undefined;
         },
-        create: async (user: User): Promise<User> => {
-            await delay();
-            const users = getStore<User[]>('users-db', []);
-            const newUser = { 
-                ...user, 
-                created_at: new Date().toISOString(), 
-                updated_at: new Date().toISOString() 
-            };
-            users.push(newUser);
-            setStore('users-db', users);
-            return newUser;
+        register: async (user: User): Promise<User> => {
+            const res = await fetch(`${API_BASE}/auth/register`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(user)
+            });
+            if (!res.ok) throw new Error('Registration failed');
+            return user;
+        },
+        login: async (email: string, password: string): Promise<{user: User} | null> => {
+            const res = await fetch(`${API_BASE}/auth/login`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ email, password })
+            });
+            if (!res.ok) return null;
+            return res.json(); // Expects { success: true, user: {...} }
         },
         update: async (user: User): Promise<User> => {
-            await delay();
-            const users = getStore<User[]>('users-db', []);
-            const idx = users.findIndex(u => u.id === user.id);
-            if (idx !== -1) {
-                users[idx] = { ...user, updated_at: new Date().toISOString() };
-                setStore('users-db', users);
-                return users[idx];
-            }
-            throw new Error("User not found");
+            const res = await fetch(`${API_BASE}/users/${user.id}`, {
+                method: 'PUT',
+                headers,
+                body: JSON.stringify(user)
+            });
+            if (!res.ok) throw new Error('Update failed');
+            return user;
         },
         delete: async (email: string) => {
-            await delay();
-            const users = getStore<User[]>('users-db', []);
-            const newUsers = users.filter(u => u.email !== email);
-            setStore('users-db', newUsers);
-            // Cleanup related data
-            localStorage.removeItem(STORAGE_PREFIX + `progress-${email}`);
-            localStorage.removeItem(STORAGE_PREFIX + `practice-${email}`);
+            await fetch(`${API_BASE}/users/${email}`, { method: 'DELETE' });
         }
     },
 
     // 2. PROGRESS
     progress: {
-        // Maps DB Flat structure to Frontend Nested structure
-        getByUser: async (userEmail: string): Promise<Record<string, TopicProgress>> => {
-            await delay();
-            // Simulating SQL: SELECT * FROM chapter_progress WHERE user_id = ...
-            const rawData = getStore<Record<string, TopicProgress>>(`progress-${userEmail}`, {});
+        getByUser: async (userId: string): Promise<Record<string, TopicProgress>> => {
+            const res = await fetch(`${API_BASE}/progress/${userId}`);
+            const data = await res.json();
             
-            // Migration logic to ensure data integrity (Mocking DB Defaults)
-            const hydratedData: Record<string, TopicProgress> = {};
-            
-            // If using real SQL, we would loop through rows here. 
-            // For LocalStorage simulation, we stick to the existing JSON structure but structure the call like an API.
-            Object.keys(INITIAL_PROGRESS).forEach(topicId => {
-                if (rawData[topicId]) {
-                    hydratedData[topicId] = rawData[topicId];
-                } else {
-                    hydratedData[topicId] = { ...INITIAL_PROGRESS[topicId] };
-                }
+            // Merge with Initial Syllabus to ensure all topics exist
+            const merged: Record<string, TopicProgress> = {};
+            Object.keys(INITIAL_PROGRESS).forEach(key => {
+                merged[key] = data[key] || { ...INITIAL_PROGRESS[key] };
             });
-            
-            return hydratedData;
+            return merged;
         },
-        
-        save: async (userEmail: string, progress: Record<string, TopicProgress>) => {
-            await delay();
-            // Simulating SQL: UPDATE chapter_progress SET ...
-            setStore(`progress-${userEmail}`, progress);
+        save: async (userId: string, topicProgress: TopicProgress) => {
+            await fetch(`${API_BASE}/progress`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ userId, ...topicProgress })
+            });
         }
     },
 
     // 3. PRACTICE STATS
     practice: {
-        get: async (userEmail: string): Promise<Record<string, TopicPracticeStats>> => {
-            await delay();
-            return getStore(`practice-${userEmail}`, {});
+        get: async (userId: string): Promise<Record<string, TopicPracticeStats>> => {
+            const res = await fetch(`${API_BASE}/practice/${userId}`);
+            return res.ok ? res.json() : {};
         },
-        save: async (userEmail: string, stats: Record<string, TopicPracticeStats>) => {
-            await delay();
-            setStore(`practice-${userEmail}`, stats);
+        save: async (userId: string, stat: TopicPracticeStats) => {
+            await fetch(`${API_BASE}/practice`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ userId, ...stat })
+            });
         }
     },
 
     // 4. TIMETABLES
     timetable: {
-        get: async (userEmail: string): Promise<WeeklySchedule | null> => {
-            await delay();
-            return getStore(`timetable-${userEmail}`, null);
+        get: async (userId: string): Promise<WeeklySchedule | null> => {
+            const res = await fetch(`${API_BASE}/timetables/${userId}`);
+            return res.ok ? res.json() : null;
         },
-        save: async (userEmail: string, schedule: WeeklySchedule | null) => {
-            await delay();
-            setStore(`timetable-${userEmail}`, schedule);
+        save: async (userId: string, schedule: WeeklySchedule | null) => {
+            await fetch(`${API_BASE}/timetables`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ userId, schedule })
+            });
         }
     },
 
-    // 5. CONTENT (Notices, Motivation, Blogs)
+    // 5. CONTENT
     content: {
         getNotices: async (): Promise<Notice[]> => {
-            await delay();
-            const data = getStore<{notices: Notice[]}>('content', { notices: [] });
-            return data.notices;
+            const res = await fetch(`${API_BASE}/content/notices`);
+            return res.ok ? res.json() : [];
         },
         addNotice: async (notice: Notice) => {
-            await delay();
-            const data = getStore<any>('content', { notices: [] });
-            data.notices.unshift(notice);
-            setStore('content', data);
+            await fetch(`${API_BASE}/content/notices`, { method: 'POST', headers, body: JSON.stringify(notice) });
         },
         deleteNotice: async (id: string) => {
-            await delay();
-            const data = getStore<any>('content', { notices: [] });
-            data.notices = data.notices.filter((n: Notice) => n.id !== id);
-            setStore('content', data);
+            await fetch(`${API_BASE}/content/notices/${id}`, { method: 'DELETE' });
         },
 
         getMotivation: async (): Promise<MotivationItem[]> => {
-            await delay();
-            const data = getStore<{motivation: MotivationItem[]}>('content', { motivation: [] });
-            return data.motivation;
+            const res = await fetch(`${API_BASE}/content/motivation`);
+            return res.ok ? res.json() : [];
         },
         addMotivation: async (item: MotivationItem) => {
-            await delay();
-            const data = getStore<any>('content', { motivation: [] });
-            data.motivation.push(item);
-            setStore('content', data);
+            await fetch(`${API_BASE}/content/motivation`, { method: 'POST', headers, body: JSON.stringify(item) });
         },
         deleteMotivation: async (id: string) => {
-            await delay();
-            const data = getStore<any>('content', { motivation: [] });
-            data.motivation = data.motivation.filter((m: MotivationItem) => m.id !== id);
-            setStore('content', data);
+            await fetch(`${API_BASE}/content/motivation/${id}`, { method: 'DELETE' });
         },
 
         getBlogs: async (): Promise<BlogPost[]> => {
-            await delay();
-            const data = getStore<{blogs: BlogPost[]}>('content', { blogs: [] });
-            return data.blogs;
+            const res = await fetch(`${API_BASE}/content/blogs`);
+            return res.ok ? res.json() : [];
         },
         addBlog: async (blog: BlogPost) => {
-            await delay();
-            const data = getStore<any>('content', { blogs: [] });
-            data.blogs.unshift(blog);
-            setStore('content', data);
+            await fetch(`${API_BASE}/content/blogs`, { method: 'POST', headers, body: JSON.stringify(blog) });
         },
         deleteBlog: async (id: string) => {
-            await delay();
-            const data = getStore<any>('content', { blogs: [] });
-            data.blogs = data.blogs.filter((b: BlogPost) => b.id !== id);
-            setStore('content', data);
+            await fetch(`${API_BASE}/content/blogs/${id}`, { method: 'DELETE' });
         }
     },
 
     // 6. EXAMS
     exams: {
         getCustom: async (): Promise<ExamPaper[]> => {
-            await delay();
-            return getStore('custom-exams', []);
+            const res = await fetch(`${API_BASE}/exams/custom`);
+            return res.ok ? res.json() : [];
         },
         addCustom: async (exam: ExamPaper) => {
-            await delay();
-            const exams = getStore<ExamPaper[]>('custom-exams', []);
-            exams.push(exam);
-            setStore('custom-exams', exams);
+            await fetch(`${API_BASE}/exams/custom`, { method: 'POST', headers, body: JSON.stringify(exam) });
         },
         deleteCustom: async (id: string) => {
-            await delay();
-            const exams = getStore<ExamPaper[]>('custom-exams', []);
-            setStore('custom-exams', exams.filter(e => e.id !== id));
+            await fetch(`${API_BASE}/exams/custom/${id}`, { method: 'DELETE' });
         }
     }
 };

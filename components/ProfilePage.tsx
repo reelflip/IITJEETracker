@@ -1,3 +1,5 @@
+
+
 import React, { useState, useMemo } from 'react';
 import { User as UserIcon, Mail, Building2, ShieldCheck, Link as LinkIcon, Send, CheckCircle, XCircle, AlertCircle, GraduationCap, Calendar, Timer, Pencil, Save, X, Loader2, Share2, Download } from 'lucide-react';
 import { authService } from '../services/authService';
@@ -57,45 +59,62 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ user, linkedUser, onCo
       };
   }, [user.targetYear, user.role]);
 
-  const handleSendRequest = () => {
+  const handleSendRequest = async () => {
     if (!connectEmail) return;
     setLoading(true);
     setMsg(null);
     
     // Simulate delay
-    setTimeout(() => {
-        const res = authService.sendConnectionRequest(user.id, connectEmail);
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    try {
+        const res = await authService.sendConnectionRequest(user.id, connectEmail);
         setMsg({
             type: res.success ? 'success' : 'error',
             text: res.message
         });
-        setLoading(false);
         if (res.success) setConnectEmail('');
-    }, 500);
-  };
-
-  const handleApprove = () => {
-    if (!user.connectionRequestFrom) return;
-    const res = authService.acceptConnectionRequest(user.id, user.connectionRequestFrom);
-    if (res.success) {
-        alert("Connection Approved!");
-        onConnectionUpdate();
+    } catch (e) {
+        setMsg({ type: 'error', text: 'Failed to send request' });
+    } finally {
+        setLoading(false);
     }
   };
 
-  const handleReject = () => {
-    authService.rejectConnectionRequest(user.id);
-    onConnectionUpdate();
+  const handleApprove = async () => {
+    if (!user.connectionRequestFrom) return;
+    try {
+        const res = await authService.acceptConnectionRequest(user.id, user.connectionRequestFrom);
+        if (res.success) {
+            alert("Connection Approved!");
+            onConnectionUpdate();
+        } else {
+            alert("Failed to approve connection: " + res.message);
+        }
+    } catch (e) {
+        alert("Failed to approve connection.");
+    }
   };
 
-  const handleSaveProfile = () => {
+  const handleReject = async () => {
+    try {
+        await authService.rejectConnectionRequest(user.id);
+        onConnectionUpdate();
+    } catch (e) {
+        alert("Failed to reject connection.");
+    }
+  };
+
+  const handleSaveProfile = async () => {
       if (!editName.trim()) {
           alert("Name cannot be empty");
           return;
       }
       setSaveLoading(true);
       
-      setTimeout(() => {
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      try {
         const updates: Partial<User> = {
             name: editName
         };
@@ -105,29 +124,36 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ user, linkedUser, onCo
             updates.targetYear = editTargetYear;
         }
 
-        const res = authService.updateProfile(user.id, updates);
+        const res = await authService.updateProfile(user.id, updates);
         if (res.success) {
             setIsEditing(false);
             onConnectionUpdate(); // Refresh dashboard session data
         } else {
-            alert("Failed to update profile.");
+            alert("Failed to update profile: " + res.message);
         }
+      } catch (e) {
+        alert("An error occurred while updating profile.");
+      } finally {
         setSaveLoading(false);
-      }, 500);
+      }
   };
 
-  const handleShareProgress = () => {
-      const data = authService.generateStudentSnapshot(user);
-      const blob = new Blob([data], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${user.name.replace(/\s+/g, '_')}_progress_snapshot.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      alert("Progress Snapshot Downloaded!\n\nSend this file to your Parent or Admin. They can upload it in their account to see your latest data.");
+  const handleShareProgress = async () => {
+      try {
+          const data = await authService.generateStudentSnapshot(user);
+          const blob = new Blob([data], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `${user.name.replace(/\s+/g, '_')}_progress_snapshot.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          alert("Progress Snapshot Downloaded!\n\nSend this file to your Parent or Admin. They can upload it in their account to see your latest data.");
+      } catch (e) {
+          alert("Failed to generate progress snapshot.");
+      }
   };
 
   return (
